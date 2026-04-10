@@ -147,47 +147,70 @@ Bei installiertem Elementor steht ein eigenes Widget in der Kategorie "Deubner S
 
 ```text
 wp-deubner-hp-services/
-├── Deubner_HP_Services.php               # Bootstrap: Konstanten, Autoloader, Init
-├── includes/                             # PHP-Klassen (Autoloaded)
-│   ├── class-dhps-api-interface.php      # API-Interface (Vertrag)
-│   ├── class-dhps-api-response.php       # API-Response Value-Object
-│   ├── class-dhps-legacy-api.php         # Legacy-HTML-API-Implementierung
-│   ├── class-dhps-cache.php              # Transient-basierter Cache
-│   ├── class-dhps-api-client.php         # API-Fassade (Cache + API)
-│   ├── class-dhps-service-registry.php   # Deklarative Service-Definitionen
-│   ├── class-dhps-shortcodes.php         # Generischer Shortcode-Handler
-│   ├── class-dhps-renderer.php           # Layout-Template-Engine
-│   ├── class-dhps-demo-manager.php      # Demo-Modus State-Machine
-│   ├── class-dhps-widget.php             # WordPress-Widget
-│   ├── class-dhps-elementor.php          # Elementor-Loader (9 Widgets)
-│   ├── class-dhps-admin.php              # Admin-Menues und Rendering
-│   └── class-dhps-admin-page-handler.php # Formular-Verarbeitung
-├── public/views/                         # Frontend-Layout-Templates
-│   ├── layout-default.php                # Standard-Layout
-│   ├── layout-card.php                   # Card-Layout
-│   └── layout-compact.php                # Kompakt-Layout
-├── widgets/elementor/                    # Elementor-Widgets
-│   ├── class-dhps-elementor-widget-base.php  # Abstrakte Basis-Klasse
+├── Deubner_HP_Services.php                  # Bootstrap: Konstanten, Autoloader, DI, Init
+├── LICENSE                                  # GPL-2.0 Lizenztext
+├── includes/                                # PHP-Klassen (Autoloaded)
+│   ├── class-dhps-api-interface.php         # API-Interface (Vertrag)
+│   ├── class-dhps-api-response.php          # API-Response Value-Object
+│   ├── class-dhps-legacy-api.php            # Legacy-HTML-API-Implementierung
+│   ├── class-dhps-cache.php                 # Transient-basierter Cache (L1 + L2)
+│   ├── class-dhps-api-client.php            # API-Fassade (Cache-Aside Pattern)
+│   ├── class-dhps-content-pipeline.php      # Content Pipeline (API -> Parser -> Template)
+│   ├── class-dhps-parser-interface.php      # Parser-Interface
+│   ├── class-dhps-parser-registry.php       # Parser-Registry (Static)
+│   ├── class-dhps-service-registry.php      # Deklarative Service-Definitionen (9 Services)
+│   ├── class-dhps-shortcodes.php            # Generischer Shortcode-Handler
+│   ├── class-dhps-renderer.php              # Layout- und Service-Template-Engine
+│   ├── class-dhps-ajax-proxy.php            # Server-seitiger AJAX-Proxy (Credential-Schutz)
+│   ├── class-dhps-demo-manager.php          # Demo-Modus State-Machine (30 Tage)
+│   ├── class-dhps-github-updater.php        # Automatische Updates via GitHub Releases
+│   ├── class-dhps-widget.php                # WordPress-Widget
+│   ├── class-dhps-elementor.php             # Elementor-Loader (9 Widgets)
+│   ├── class-dhps-admin.php                 # Admin-Menues und Rendering
+│   ├── class-dhps-admin-page-handler.php    # Formular-Verarbeitung
+│   └── parsers/                             # Service-spezifische HTML-Parser
+│       ├── class-dhps-mio-parser.php        # MIO/LXMIO: Steuertermine, News, Suche
+│       ├── class-dhps-mio-news-parser.php   # MIO: AJAX-News-Paginierung
+│       ├── class-dhps-mmb-parser.php        # MMB: Kategorien, Merkblaetter, PDFs
+│       ├── class-dhps-mmb-search-parser.php # MMB: AJAX-Suchergebnisse
+│       └── class-dhps-tp-parser.php         # TP: Videos, Kategorien, Lazy-Load
+├── public/                                  # Frontend-Output
+│   ├── views/                               # Templates
+│   │   ├── layout-default.php               # Standard-Layout (Raw HTML)
+│   │   ├── layout-card.php                  # Card-Layout (Raw HTML)
+│   │   ├── layout-compact.php               # Kompakt-Layout (Raw HTML)
+│   │   └── services/                        # Service-spezifische Templates (Parsed Data)
+│   │       ├── mio/{default,card,compact}.php
+│   │       ├── mmb/{default,card,compact}.php
+│   │       └── tp/{default,card,compact}.php
+│   └── js/                                  # Frontend-JavaScript (Vanilla, kein jQuery)
+│       ├── dhps-mio.js                      # AJAX-News, Akkordeon, Paginierung
+│       ├── dhps-mmb.js                      # Suche, Akkordeon, PDF-Download
+│       └── dhps-tp.js                       # Video Lazy-Load, Kategorie-Filter
+├── widgets/elementor/                       # Elementor-Widgets (Elementor 4.x kompatibel)
+│   ├── class-dhps-elementor-widget-base.php     # Abstrakte Basis (Static DI)
 │   └── class-dhps-elementor-service-widgets.php # 9 Service-Widgets
-├── admin/views/                          # Admin-Templates
-│   ├── partials/header.php               # Gemeinsamer Plugin-Header
-│   ├── dashboard.php                     # Dashboard-Uebersicht
-│   ├── service-config.php                # Generisches Service-Formular
-│   └── mio-config.php                    # MI-Online Dual-Formular
-├── assets/images/                        # Plugin-Assets (Logo/Icon)
-├── css/                                  # Stylesheets
-│   ├── dhps-design-tokens.css             # Design-Token-System (CSS Custom Properties)
-│   ├── dhps_admin.css                    # Admin-Bereich Styles
-│   ├── dhps_base.css                     # Basis-Styles (Elementor)
-│   ├── dhps-frontend.css                 # Layout-Container-Styles
-│   └── dhps-ui.css                       # UI-Framework
-├── docs/                                 # Projektdokumentation
-│   ├── 01-PROJECT-ANALYSIS.md            # Ist-Analyse und Code-Review
-│   ├── 02-DEVELOPMENT-ROADMAP.md         # Entwicklungsplan
-│   ├── 03-API-REFERENCE.md               # API-Dokumentation
-│   └── 04-SHORTCODE-REFERENCE.md         # Shortcode-Referenz
-├── uninstall.php                         # Plugin-Deinstallation
-└── README.md                             # Diese Datei
+├── admin/                                   # Admin-Bereich
+│   ├── views/                               # Admin-Templates
+│   │   ├── dashboard.php                    # Service-Status, Demo-Controls
+│   │   ├── service-config.php               # Generisches Service-Formular
+│   │   ├── mio-config.php                   # MI-Online Dual-Formular (MIO + LXMIO)
+│   │   └── partials/header.php              # Navigation + Breadcrumb
+│   └── js/dhps-admin.js                     # Admin-JavaScript (Demo-Toggle)
+├── css/                                     # Stylesheets
+│   ├── dhps-design-tokens.css               # CSS Custom Properties (--dhps-*)
+│   ├── dhps_base.css                        # Basis-Styles (Elementor-Compat)
+│   ├── dhps-frontend.css                    # Frontend-Komponenten (BEM)
+│   ├── dhps-ui.css                          # UI-Framework (Admin)
+│   ├── dhps_admin.css                       # Admin-Dashboard Styles
+│   └── dhps-dashboard.css                   # Dashboard-spezifisch
+├── docs/                                    # Dokumentation
+│   ├── architecture/                        # Architektur (9 Dokumente)
+│   ├── project/                             # Projektstatus (4 Dokumente)
+│   └── team-knowledge/                      # Team-Wissen (6 Dokumente)
+├── assets/images/dvicon.svg                 # Deubner Verlag Icon
+├── uninstall.php                            # Plugin-Deinstallation (Options + Transients)
+└── README.md                                # Diese Datei
 ```
 
 ---

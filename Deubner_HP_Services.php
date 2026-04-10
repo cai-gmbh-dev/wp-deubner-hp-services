@@ -15,13 +15,13 @@
  * Requires PHP: 8.0
  * Update URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  *
- * Developer: CAI UG, Hansestadt Wipperfürth, Deutschland
- * Author: Kai R. Emde
+ * Developer: CAI GmbH, Hansestadt Wipperfuerth, Deutschland
+ * Developer Author: Kai R. Emde
  *
  * @package Deubner Homepage-Service
  * @version 0.9.5
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
- * @copyright Copyright (c) 2004 - 2025, Deubner Verlag
+ * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */

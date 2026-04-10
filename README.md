@@ -2,7 +2,7 @@
 
 WordPress-Plugin zur Integration der Deubner Verlag Content-Services
 
-Version: 0.9.5 | Lizenz: GPL-2.0-or-later | Entwicklung: CAI UG
+Version: 0.9.5 | Lizenz: GPL-2.0-or-later | Entwicklung: CAI GmbH
 
 ---
 
@@ -240,8 +240,14 @@ Bei Fragen zur Einrichtung oder Freischaltung:
 
 ## Lizenz und Copyright
 
-- **Lizenz:** GPL-2.0-or-later
-- **Plugin:** (c) Deubner-Verlag GmbH & Co KG
-- **Entwicklung:** CAI UG, Hansestadt Wipperfuerth
-- **Entwickler:** Kai R. Emde
-- **Copyright:** 2004 - 2026, Deubner Verlag
+Dieses Plugin ist lizenziert unter der [GNU General Public License v2.0 or later](LICENSE).
+
+- **Herausgeber:** CAI GmbH, Hansestadt Wipperfuerth, Deutschland
+- **Entwicklung:** CAI GmbH / Kai R. Emde
+- **Inhalte-Anbieter:** Deubner Verlag GmbH & Co. KG, Koeln
+- **Copyright:** 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
+
+Die ueber dieses Plugin eingebundenen Inhalte (Texte, Merkblaetter, Videos, Infografiken)
+sind Eigentum des Deubner Verlags und nicht Bestandteil dieser Lizenz.
+Die Nutzung der Inhalte erfordert eine gueltige Freischaltung (OTA-Nummer / Kundennummer)
+beim Deubner Verlag.

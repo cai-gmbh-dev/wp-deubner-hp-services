@@ -1,0 +1,82 @@
+/**
+ * Design Tokens: Deubner Homepage Services
+ *
+ * Zentrale Definition aller CSS Custom Properties.
+ * Wird vor allen anderen Admin-Stylesheets geladen.
+ *
+ * @package Deubner Homepage-Service
+ * @since   0.8.0
+ */
+
+:root {
+  /* Deubner Primaerfarben */
+  --dhps-color-recht:         #1E73BE;
+  --dhps-color-recht-light:   #ebf2f9;
+  --dhps-color-steuern:       #2e8a37;
+  --dhps-color-steuern-light: #ecf4ed;
+  --dhps-color-medizin:       #0097a7;
+  --dhps-color-medizin-light: #e0f2f1;
+
+  /* Semantische Farben */
+  --dhps-color-primary:       var(--dhps-color-recht);
+  --dhps-color-success:       #2e8a37;
+  --dhps-color-warning:       #f4bf3e;
+  --dhps-color-danger:        #D7263D;
+  --dhps-color-info:          #1E73BE;
+
+  /* Neutrale Farben */
+  --dhps-color-text:          #1a1a1a;
+  --dhps-color-text-light:    #454552;
+  --dhps-color-text-muted:    #737373;
+  --dhps-color-bg:            #f0f0f1;
+  --dhps-color-bg-white:      #ffffff;
+  --dhps-color-border:        #dfdfdf;
+
+  /* Zusaetzliche Farben (Legacy-Kompatibilitaet) */
+  --dhps-color-pink:          #E35899;
+  --dhps-color-pink-light:    #fceff5;
+  --dhps-color-orange:        #f39c12;
+  --dhps-color-orange-light:  #fef5ea;
+  --dhps-color-wp-blue:       #007cba;
+  --dhps-color-wp-blue-light: #c6e0ef;
+  --dhps-color-warning-light: #f2e6c9;
+  --dhps-color-info-light:    #ecf8fe;
+  --dhps-color-danger-light:  #fbebed;
+
+  /* Typografie */
+  --dhps-font-family:         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --dhps-fs-xs:               0.75rem;
+  --dhps-fs-sm:               0.8125rem;
+  --dhps-fs-base:             0.875rem;
+  --dhps-fs-md:               1rem;
+  --dhps-fs-lg:               1.125rem;
+  --dhps-fs-xl:               1.25rem;
+  --dhps-fs-2xl:              1.5rem;
+
+  /* Spacing */
+  --dhps-space-xxs:           4px;
+  --dhps-space-xs:            6px;
+  --dhps-space-sm:            8px;
+  --dhps-space-s:             12px;
+  --dhps-space-md:            16px;
+  --dhps-space-lg:            24px;
+  --dhps-space-xl:            32px;
+  --dhps-space-2xl:           48px;
+
+  /* Grid */
+  --dhps-grid-margin:         var(--dhps-space-sm);
+  --dhps-grid-gap:            var(--dhps-space-md);
+
+  /* Zusaetzliche semantische Farben */
+  --dhps-color-bg-alt:        #f8f9fa;
+  --dhps-color-steuern-dark:  #257030;
+  --dhps-color-meta:          #737373;
+
+  /* Radien & Schatten */
+  --dhps-radius:              8px;
+  --dhps-radius-sm:           6px;
+  --dhps-radius-lg:           12px;
+  --dhps-border:              1px solid var(--dhps-color-border);
+  --dhps-shadow:              0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --dhps-shadow-md:           0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+}

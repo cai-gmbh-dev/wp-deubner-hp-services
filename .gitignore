@@ -1,0 +1,31 @@
+# Testdaten und Referenzmaterial
+related-infos/
+
+# Docker-Volumes und Runtime
+db_data/
+wp_data/
+.env.docker
+
+# Docker-Entwicklungsumgebung (nicht im Release)
+docker/
+docker-compose.yml
+demo/
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+nul
+
+# Logs
+*.log
+debug.log
+
+# Windows Artefakte
+*.bak
+*.tmp

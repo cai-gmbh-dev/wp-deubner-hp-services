@@ -81,11 +81,11 @@ class DHPS_GitHub_Updater {
     private $transient_key = 'dhps_github_release';
 
     /**
-     * Cache-TTL in Sekunden (12 Stunden).
+     * Cache-TTL in Sekunden (3 Stunden).
      *
      * @var int
      */
-    private $cache_ttl = 43200;
+    private $cache_ttl = 10800;
 
     /**
      * Konstruktor.
@@ -114,14 +114,32 @@ class DHPS_GitHub_Updater {
      */
     public function init(): void {
         // Primaerer Update-Check: WordPress 5.8+ Update URI Mechanismus.
-        // Wird von WP fuer Plugins mit Update URI Header aufgerufen.
         add_filter( 'update_plugins_github.com', array( $this, 'check_update_uri' ), 10, 4 );
 
         // Fallback: Klassischer Update-Check via Transient-Filter.
         add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'check_for_update' ) );
 
+        // Cache loeschen wenn WordPress Update-Check erzwingt (Dashboard "Erneut pruefen").
+        add_action( 'delete_site_transient_update_plugins', array( $this, 'flush_release_cache' ) );
+
         add_filter( 'plugins_api', array( $this, 'plugin_info' ), 10, 3 );
         add_filter( 'upgrader_source_selection', array( $this, 'fix_directory_name' ), 10, 4 );
+    }
+
+    /**
+     * Loescht den GitHub-Release-Cache wenn WordPress den Update-Transient loescht.
+     *
+     * Wird ausgeloest wenn der User auf "Erneut pruefen" klickt oder
+     * WordPress den Update-Check neu startet. Stellt sicher, dass
+     * beim naechsten Check frische Daten von GitHub geholt werden.
+     *
+     * @since 0.9.7
+     *
+     * @return void
+     */
+    public function flush_release_cache(): void {
+        delete_transient( $this->transient_key );
+        $this->github_data = null;
     }
 
     /**

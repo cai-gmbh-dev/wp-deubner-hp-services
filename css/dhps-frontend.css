@@ -1369,11 +1369,72 @@
 .dhps-tp-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 20px;
+	gap: var(--dhps-grid-gap, 20px);
 }
 
-.dhps-tp-grid--3col {
-	grid-template-columns: repeat(3, 1fr);
+/* Konfigurierbare Spaltenanzahl (1-4) */
+.dhps-tp-grid--1col { grid-template-columns: 1fr; }
+.dhps-tp-grid--2col { grid-template-columns: repeat(2, 1fr); }
+.dhps-tp-grid--3col { grid-template-columns: repeat(3, 1fr); }
+.dhps-tp-grid--4col { grid-template-columns: repeat(4, 1fr); }
+
+/* Lazy Loading: versteckte Cards */
+.dhps-tp-card--lazy-hidden {
+	display: none !important;
+}
+
+/* Load More Button */
+.dhps-tp-load-more {
+	display: block;
+	margin: var(--dhps-space-lg, 24px) auto 0;
+	padding: 10px 28px;
+	background: var(--dhps-color-steuern, #0AA245);
+	color: #fff;
+	border: none;
+	border-radius: var(--dhps-radius, 0);
+	font-size: 0.9375rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.dhps-tp-load-more::before {
+	content: "\00BB\0020";
+}
+
+.dhps-tp-load-more:hover {
+	background: var(--dhps-color-steuern-hover, #077231);
+}
+
+/* Lazy Sentinel (fuer Auto-Modus) */
+.dhps-tp-lazy-sentinel {
+	height: 1px;
+	width: 100%;
+}
+
+/* ==========================================================================
+   TP: Style-Presets
+   ========================================================================== */
+
+/* Minimal: Kein Schatten, kein Border, cleaner Look */
+.dhps-tp-style--minimal .dhps-tp-card {
+	box-shadow: none;
+	border: none;
+}
+
+.dhps-tp-style--minimal .dhps-tp-card:hover {
+	box-shadow: none;
+	transform: none;
+}
+
+/* Shadow: Kraeftiger Deubner-Schatten */
+.dhps-tp-style--shadow .dhps-tp-card {
+	box-shadow: var(--dhps-shadow, 0 0 5px 0 rgba(0,0,0,0.18));
+	border: none;
+}
+
+.dhps-tp-style--shadow .dhps-tp-card:hover {
+	box-shadow: var(--dhps-shadow-hover, 0 0 12px 0 rgba(0,0,0,0.25));
 }
 
 /* ==========================================================================
@@ -1608,7 +1669,7 @@
 }
 
 .dhps-tp-compact__player .dhps-tp-video__player {
-	border-radius: 4px;
+	border-radius: var(--dhps-radius, 0);
 }
 
 /* ==========================================================================
@@ -1616,11 +1677,9 @@
    ========================================================================== */
 
 @media (max-width: 1024px) {
-	.dhps-tp-grid {
-		grid-template-columns: repeat(2, 1fr);
-	}
-
-	.dhps-tp-grid--3col {
+	.dhps-tp-grid,
+	.dhps-tp-grid--3col,
+	.dhps-tp-grid--4col {
 		grid-template-columns: repeat(2, 1fr);
 	}
 }
@@ -1631,13 +1690,12 @@
 		gap: 16px;
 	}
 
-	.dhps-tp-grid {
+	.dhps-tp-grid,
+	.dhps-tp-grid--2col,
+	.dhps-tp-grid--3col,
+	.dhps-tp-grid--4col {
 		grid-template-columns: 1fr;
 		gap: 16px;
-	}
-
-	.dhps-tp-grid--3col {
-		grid-template-columns: 1fr;
 	}
 
 	.dhps-tp-catalog__filter {
@@ -1662,11 +1720,11 @@
 
 @media (max-width: 480px) {
 	.dhps-tp-video__player {
-		border-radius: 4px;
+		border-radius: var(--dhps-radius, 0);
 	}
 
 	.dhps-tp-card {
-		border-radius: 4px;
+		border-radius: var(--dhps-radius, 0);
 	}
 
 	.dhps-tp-card__body {

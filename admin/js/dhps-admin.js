@@ -14,7 +14,7 @@
 (function( $ ) {
 	'use strict';
 
-	$( document ).on( 'click', '.dhps-btn--demo, .dhps-btn--stop', function( e ) {
+	$( document ).on( 'click', '.dhps-btn--demo, .dhps-btn--stop, .dhps-db-btn--demo, .dhps-db-btn--stop', function( e ) {
 		e.preventDefault();
 
 		var $button     = $( this );

@@ -5,6 +5,7 @@
  * - AJAX-Proxy: Video-src wird serverseitig mit kdnr generiert
  * - Kategorie-Filter: Videos nach Rubrik filtern
  * - Compact-Accordion: Auf-/Zuklappen der Rubriken
+ * - Load More: Schrittweises Einblenden weiterer Video-Cards (manuell/auto)
  *
  * Keine externe Abhaengigkeit (kein jQuery).
  * OTA-Kundennummer wird NICHT im Client-Code verwendet.
@@ -26,6 +27,7 @@
 			initLazyVideoLoading( container, config );
 			initCategoryFilter( container );
 			initCompactAccordion( container );
+			initLazyLoadMore( container );
 		} );
 	}
 
@@ -126,6 +128,10 @@
 
 	/**
 	 * Kategorie-Filter: Zeigt/versteckt Video-Cards basierend auf Kategorie.
+	 *
+	 * Nach dem Filtern wird der Lazy-Load-Zustand zurueckgesetzt:
+	 * Von den sichtbaren (nicht ausgefilterten) Cards werden nur die
+	 * ersten N angezeigt, der Rest wird wieder versteckt.
 	 */
 	function initCategoryFilter( container ) {
 		// Shared Filter-Bar Klasse bevorzugen, Fallback auf Legacy-Klasse.
@@ -163,6 +169,9 @@
 						card.setAttribute( 'hidden', '' );
 					}
 				} );
+
+				// Lazy-Load-Zustand nach Filterwechsel zuruecksetzen.
+				resetLazyLoadAfterFilter( container );
 			} );
 		} );
 	}
@@ -236,6 +245,246 @@
 			var posterEl = playerDiv.querySelector( '.dhps-tp-video__poster' );
 			loadVideoIframe( playerDiv.querySelector( '.dhps-tp-video__player' ), posterEl, videoSlug, posterUrl, vModus, config );
 		} );
+	}
+
+	/**
+	 * Load More: Schrittweises Einblenden weiterer Video-Cards.
+	 *
+	 * Liest data-lazy-count und data-lazy-mode vom Container.
+	 * - lazy-count=0 : Alle Cards sichtbar, nichts zu tun.
+	 * - lazy-mode=manual : Button-Klick blendet naechste Charge ein.
+	 * - lazy-mode=auto   : IntersectionObserver blendet automatisch ein.
+	 */
+	function initLazyLoadMore( container ) {
+		var lazyCount = parseInt( container.getAttribute( 'data-lazy-count' ) || '0', 10 );
+		var lazyMode  = container.getAttribute( 'data-lazy-mode' ) || 'manual';
+
+		if ( lazyCount <= 0 ) {
+			return; // Alle sichtbar, nichts zu tun.
+		}
+
+		var loadMoreBtn = container.querySelector( '.dhps-tp-load-more' );
+
+		if ( lazyMode === 'manual' && loadMoreBtn ) {
+			loadMoreBtn.addEventListener( 'click', function () {
+				showNextBatch( container, lazyCount );
+			} );
+		}
+
+		if ( lazyMode === 'auto' ) {
+			// Button verstecken, IntersectionObserver nutzen.
+			if ( loadMoreBtn ) {
+				loadMoreBtn.style.display = 'none';
+			}
+			setupAutoLoad( container, lazyCount );
+		}
+	}
+
+	/**
+	 * Zeigt die naechste Charge versteckter Cards an.
+	 *
+	 * Sucht alle aktuell versteckten (lazy-hidden) Cards, die nicht
+	 * durch den Kategorie-Filter ausgeblendet sind, und macht die
+	 * naechsten N sichtbar.
+	 *
+	 * @param {Element} container - Der .dhps-service--tp Container.
+	 * @param {number}  batchSize - Anzahl der Cards pro Charge.
+	 */
+	function showNextBatch( container, batchSize ) {
+		var hiddenCards = getFilteredHiddenCards( container );
+		var count       = Math.min( batchSize, hiddenCards.length );
+
+		for ( var i = 0; i < count; i++ ) {
+			hiddenCards[ i ].classList.remove( 'dhps-tp-card--lazy-hidden' );
+			hiddenCards[ i ].removeAttribute( 'hidden' );
+		}
+
+		// Pruefen ob noch versteckte Cards uebrig sind.
+		var remaining = getFilteredHiddenCards( container );
+		if ( remaining.length === 0 ) {
+			hideLoadMoreButton( container );
+		}
+	}
+
+	/**
+	 * Gibt alle lazy-hidden Cards zurueck, die nicht durch den
+	 * Kategorie-Filter ausgeblendet sind.
+	 *
+	 * Cards, die durch den Filter display:none haben, werden
+	 * uebersprungen - sie sind bereits kategorie-gefiltert.
+	 *
+	 * @param {Element} container - Der .dhps-service--tp Container.
+	 * @return {Array} Array von lazy-hidden Card-Elementen.
+	 */
+	function getFilteredHiddenCards( container ) {
+		var allHidden = container.querySelectorAll( '.dhps-tp-card--lazy-hidden' );
+		var result    = [];
+
+		allHidden.forEach( function ( card ) {
+			// Nur Cards die nicht durch Kategorie-Filter ausgeblendet sind.
+			if ( card.style.display !== 'none' ) {
+				result.push( card );
+			}
+		} );
+
+		return result;
+	}
+
+	/**
+	 * Versteckt den "Weitere laden"-Button.
+	 *
+	 * @param {Element} container - Der .dhps-service--tp Container.
+	 */
+	function hideLoadMoreButton( container ) {
+		var btn = container.querySelector( '.dhps-tp-load-more' );
+		if ( btn ) {
+			btn.style.display = 'none';
+		}
+	}
+
+	/**
+	 * Zeigt den "Weitere laden"-Button wieder an.
+	 *
+	 * @param {Element} container - Der .dhps-service--tp Container.
+	 */
+	function showLoadMoreButton( container ) {
+		var lazyMode = container.getAttribute( 'data-lazy-mode' ) || 'manual';
+		if ( lazyMode !== 'manual' ) {
+			return; // Im Auto-Modus bleibt der Button versteckt.
+		}
+
+		var btn = container.querySelector( '.dhps-tp-load-more' );
+		if ( btn ) {
+			btn.style.display = '';
+		}
+	}
+
+	/**
+	 * Richtet den IntersectionObserver fuer den Auto-Modus ein.
+	 *
+	 * Beobachtet ein Sentinel-Element (.dhps-tp-lazy-sentinel) oder
+	 * erstellt eines falls nicht vorhanden. Wenn die letzte sichtbare
+	 * Card in den Viewport kommt, wird die naechste Charge geladen.
+	 *
+	 * @param {Element} container - Der .dhps-service--tp Container.
+	 * @param {number}  batchSize - Anzahl der Cards pro Charge.
+	 */
+	function setupAutoLoad( container, batchSize ) {
+		var sentinel = container.querySelector( '.dhps-tp-lazy-sentinel' );
+
+		// Sentinel erstellen falls nicht vorhanden.
+		if ( ! sentinel ) {
+			sentinel = document.createElement( 'div' );
+			sentinel.className = 'dhps-tp-lazy-sentinel';
+			sentinel.setAttribute( 'aria-hidden', 'true' );
+
+			var grid = container.querySelector( '.dhps-tp-grid' ) ||
+				container.querySelector( '.dhps-tp-cards' );
+
+			if ( grid ) {
+				grid.parentNode.insertBefore( sentinel, grid.nextSibling );
+			} else {
+				container.appendChild( sentinel );
+			}
+		}
+
+		// Observer speichern fuer spaeteres Disconnect bei Filter-Reset.
+		if ( container._dhpsLazyObserver ) {
+			container._dhpsLazyObserver.disconnect();
+		}
+
+		// Throttle: Nur einen Batch pro Intersection-Cycle laden.
+		// Bekannte Limitation: Bei mehreren TP-Widgets auf einer Seite
+		// kann der Auto-Modus durch gleichzeitige Observer-Triggers alle
+		// Batches in schneller Folge laden. Empfehlung: Bei Mehrfachnutzung
+		// den manuellen Modus verwenden.
+		var isLoading = false;
+
+		var observer = new IntersectionObserver( function ( entries ) {
+			entries.forEach( function ( entry ) {
+				if ( ! entry.isIntersecting || isLoading ) {
+					return;
+				}
+
+				var remaining = getFilteredHiddenCards( container );
+				if ( remaining.length === 0 ) {
+					observer.disconnect();
+					return;
+				}
+
+				isLoading = true;
+				showNextBatch( container, batchSize );
+
+				// Kurze Pause vor dem naechsten Batch (verhindert Burst-Loading).
+				setTimeout( function () {
+					isLoading = false;
+
+					if ( getFilteredHiddenCards( container ).length === 0 ) {
+						observer.disconnect();
+					}
+				}, 150 );
+			} );
+		}, {
+			root: null,
+			rootMargin: '100px',
+			threshold: 0,
+		} );
+
+		observer.observe( sentinel );
+		container._dhpsLazyObserver = observer;
+	}
+
+	/**
+	 * Setzt den Lazy-Load-Zustand nach einem Kategorie-Filterwechsel zurueck.
+	 *
+	 * Alle Cards werden zunaechst als lazy-hidden markiert. Dann werden
+	 * von den sichtbaren (nicht ausgefilterten) Cards die ersten N
+	 * eingeblendet, der Rest bleibt versteckt.
+	 *
+	 * @param {Element} container - Der .dhps-service--tp Container.
+	 */
+	function resetLazyLoadAfterFilter( container ) {
+		var lazyCount = parseInt( container.getAttribute( 'data-lazy-count' ) || '0', 10 );
+		var lazyMode  = container.getAttribute( 'data-lazy-mode' ) || 'manual';
+
+		if ( lazyCount <= 0 ) {
+			return; // Kein Lazy Loading aktiv.
+		}
+
+		var allCards    = container.querySelectorAll( '.dhps-tp-card' );
+		var visibleIdx  = 0;
+
+		allCards.forEach( function ( card ) {
+			// Ausgefilterte Cards ueberspringen (durch Kategorie-Filter).
+			if ( card.style.display === 'none' ) {
+				return;
+			}
+
+			visibleIdx++;
+
+			if ( visibleIdx <= lazyCount ) {
+				// Erste N sichtbare Cards einblenden.
+				card.classList.remove( 'dhps-tp-card--lazy-hidden' );
+				card.removeAttribute( 'hidden' );
+			} else {
+				// Rest wieder verstecken.
+				card.classList.add( 'dhps-tp-card--lazy-hidden' );
+				card.setAttribute( 'hidden', '' );
+			}
+		} );
+
+		// Button-Zustand aktualisieren.
+		var remaining = getFilteredHiddenCards( container );
+		if ( remaining.length > 0 ) {
+			showLoadMoreButton( container );
+		} else {
+			hideLoadMoreButton( container );
+		}
+
+		// Auto-Modus: Observer neu starten.
+		if ( lazyMode === 'auto' && remaining.length > 0 ) {
+			setupAutoLoad( container, lazyCount );
+		}
 	}
 
 	function escapeAttr( str ) {

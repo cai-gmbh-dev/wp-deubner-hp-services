@@ -9,49 +9,66 @@
  */
 
 :root {
-  /* Deubner Primaerfarben */
-  --dhps-color-recht:         #1E73BE;
-  --dhps-color-recht-light:   #ebf2f9;
-  --dhps-color-steuern:       #2e8a37;
-  --dhps-color-steuern-light: #ecf4ed;
+  /* -------------------------------------------------------
+   * Deubner Verlag Primaerfarben
+   * Abgeleitet von https://www.deubner-steuern.de/
+   * ------------------------------------------------------- */
+  --dhps-color-steuern:       #0AA245;
+  --dhps-color-steuern-hover: #077231;
+  --dhps-color-steuern-dark:  #055022;
+  --dhps-color-steuern-light: #e8f5ed;
+  --dhps-color-recht:         #0054A6;
+  --dhps-color-recht-hover:   #003A73;
+  --dhps-color-recht-dark:    #002D5A;
+  --dhps-color-recht-light:   #e8f0f8;
   --dhps-color-medizin:       #0097a7;
   --dhps-color-medizin-light: #e0f2f1;
 
   /* Semantische Farben */
-  --dhps-color-primary:       var(--dhps-color-recht);
-  --dhps-color-success:       #2e8a37;
-  --dhps-color-warning:       #f4bf3e;
-  --dhps-color-danger:        #D7263D;
+  --dhps-color-primary:       var(--dhps-color-steuern);
+  --dhps-color-primary-hover: var(--dhps-color-steuern-hover);
+  --dhps-color-success:       #0AA245;
+  --dhps-color-warning:       #E88300;
+  --dhps-color-danger:        #C60202;
+  --dhps-color-danger-hover:  #940101;
   --dhps-color-info:          #1E73BE;
 
-  /* Neutrale Farben */
-  --dhps-color-text:          #1a1a1a;
-  --dhps-color-text-light:    #454552;
-  --dhps-color-text-muted:    #737373;
-  --dhps-color-bg:            #f0f0f1;
+  /* Neutrale Farben (Deubner-konform) */
+  --dhps-color-text:          #333333;
+  --dhps-color-text-light:    #555555;
+  --dhps-color-text-muted:    #777777;
+  --dhps-color-meta:          #999999;
+  --dhps-color-bg:            #f5f5f5;
+  --dhps-color-bg-alt:        #f2f2f2;
   --dhps-color-bg-white:      #ffffff;
-  --dhps-color-border:        #dfdfdf;
+  --dhps-color-border:        #dddddd;
 
-  /* Zusaetzliche Farben (Legacy-Kompatibilitaet) */
+  /* Zusaetzliche Farben */
   --dhps-color-pink:          #E35899;
   --dhps-color-pink-light:    #fceff5;
-  --dhps-color-orange:        #f39c12;
+  --dhps-color-orange:        #E88300;
   --dhps-color-orange-light:  #fef5ea;
   --dhps-color-wp-blue:       #007cba;
   --dhps-color-wp-blue-light: #c6e0ef;
-  --dhps-color-warning-light: #f2e6c9;
+  --dhps-color-warning-light: #fef5ea;
   --dhps-color-info-light:    #ecf8fe;
   --dhps-color-danger-light:  #fbebed;
+  --dhps-color-badge-neu:     #E85938;
+  --dhps-color-badge-aktion:  #E88300;
+  --dhps-color-badge-top:     #2ABDBF;
 
-  /* Typografie */
-  --dhps-font-family:         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --dhps-fs-xs:               0.75rem;
+  /* -------------------------------------------------------
+   * Typografie (Deubner: Lato + Lora)
+   * ------------------------------------------------------- */
+  --dhps-font-family:         "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dhps-font-family-serif:   "Lora", Georgia, "Times New Roman", Times, serif;
+  --dhps-fs-xs:               0.6875rem;
   --dhps-fs-sm:               0.8125rem;
   --dhps-fs-base:             0.875rem;
   --dhps-fs-md:               1rem;
-  --dhps-fs-lg:               1.125rem;
-  --dhps-fs-xl:               1.25rem;
-  --dhps-fs-2xl:              1.5rem;
+  --dhps-fs-lg:               1.1875rem;
+  --dhps-fs-xl:               1.5rem;
+  --dhps-fs-2xl:              1.625rem;
 
   /* Spacing */
   --dhps-space-xxs:           4px;
@@ -65,18 +82,16 @@
 
   /* Grid */
   --dhps-grid-margin:         var(--dhps-space-sm);
-  --dhps-grid-gap:            var(--dhps-space-md);
+  --dhps-grid-gap:            20px;
 
-  /* Zusaetzliche semantische Farben */
-  --dhps-color-bg-alt:        #f8f9fa;
-  --dhps-color-steuern-dark:  #257030;
-  --dhps-color-meta:          #737373;
-
-  /* Radien & Schatten */
-  --dhps-radius:              8px;
-  --dhps-radius-sm:           6px;
-  --dhps-radius-lg:           12px;
+  /* -------------------------------------------------------
+   * Radien & Schatten (Deubner: scharfe Kanten)
+   * ------------------------------------------------------- */
+  --dhps-radius:              0;
+  --dhps-radius-sm:           0;
+  --dhps-radius-lg:           0;
   --dhps-border:              1px solid var(--dhps-color-border);
-  --dhps-shadow:              0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
-  --dhps-shadow-md:           0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --dhps-shadow:              0 0 5px 0 rgba(0,0,0,0.18);
+  --dhps-shadow-md:           0 0 8px 0 rgba(0,0,0,0.22);
+  --dhps-shadow-hover:        0 0 12px 0 rgba(0,0,0,0.25);
 }

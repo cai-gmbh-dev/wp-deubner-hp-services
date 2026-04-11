@@ -8,6 +8,12 @@
  * Videos werden als Poster-Images angezeigt. Der iframe wird erst
  * bei Klick ueber den AJAX-Proxy geladen (kdnr-Schutz + Performance).
  *
+ * Konfigurierbar ueber WordPress-Filter:
+ * - dhps_tp_grid_columns (int)    Spalten im Grid (Standard: 3).
+ * - dhps_tp_lazy_count   (int)    Anzahl sichtbarer Cards (0 = alle).
+ * - dhps_tp_lazy_mode    (string) 'manual' oder 'auto'.
+ * - dhps_tp_style        (string) 'default', 'minimal' oder 'shadow'.
+ *
  * Kann vom Theme ueberschrieben werden unter:
  * {theme}/dhps/services/tp/default.php
  *
@@ -30,11 +36,34 @@ $featured    = $data['featured_video'] ?? null;
 $categories  = $data['categories'] ?? array();
 $service_tag = $data['service_tag'] ?? 'tp';
 
+// Konfigurierbare Optionen via WordPress-Filter.
+$grid_columns = absint( apply_filters( 'dhps_tp_grid_columns', 3 ) );
+$lazy_count   = absint( apply_filters( 'dhps_tp_lazy_count', 0 ) );
+$lazy_mode    = sanitize_key( apply_filters( 'dhps_tp_lazy_mode', 'manual' ) );
+$tp_style     = sanitize_key( apply_filters( 'dhps_tp_style', 'default' ) );
+
+// Sicherheitsgrenzen.
+if ( $grid_columns < 1 || $grid_columns > 6 ) {
+	$grid_columns = 3;
+}
+if ( ! in_array( $lazy_mode, array( 'manual', 'auto' ), true ) ) {
+	$lazy_mode = 'manual';
+}
+if ( ! in_array( $tp_style, array( 'default', 'minimal', 'shadow' ), true ) ) {
+	$tp_style = 'default';
+}
+
 wp_enqueue_script( 'dhps-tp-js' );
+
+$video_index = 0;
 ?>
-<div class="dhps-service <?php echo esc_attr( $service_class . ' ' . $layout_class . $custom_class ); ?>"
+<div class="dhps-service <?php echo esc_attr( $service_class . ' ' . $layout_class . $custom_class ); ?> dhps-tp-style--<?php echo esc_attr( $tp_style ); ?>"
 	 data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
-	 data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_tp_nonce' ) ); ?>">
+	 data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_tp_nonce' ) ); ?>"
+	 data-style="<?php echo esc_attr( $tp_style ); ?>"
+	 data-columns="<?php echo esc_attr( $grid_columns ); ?>"
+	 data-lazy-count="<?php echo esc_attr( $lazy_count ); ?>"
+	 data-lazy-mode="<?php echo esc_attr( $lazy_mode ); ?>">
 
 	<?php if ( $featured ) : ?>
 	<!-- Featured Video -->
@@ -53,10 +82,10 @@ wp_enqueue_script( 'dhps-tp-js' );
 						 class="dhps-tp-video__poster-img"
 						 loading="lazy" width="500" height="291">
 					<?php endif; ?>
-					<span class="dhps-tp-video__play-btn" aria-hidden="true">
+					<span class="dhps-tp-video__play-btn" aria-hidden="true" style="color: var(--dhps-color-steuern)">
 						<svg width="64" height="64" viewBox="0 0 64 64">
 							<circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.9)"/>
-							<polygon points="26,20 26,44 46,32" fill="#2e8a37"/>
+							<polygon points="26,20 26,44 46,32" fill="currentColor"/>
 						</svg>
 					</span>
 				</div>
@@ -97,12 +126,16 @@ wp_enqueue_script( 'dhps-tp-js' );
 		</nav>
 
 		<!-- Video-Grid -->
-		<div class="dhps-tp-grid">
+		<div class="dhps-tp-grid dhps-tp-grid--<?php echo esc_attr( $grid_columns ); ?>col">
 			<?php foreach ( $categories as $cat_index => $cat ) : ?>
-				<?php foreach ( $cat['videos'] as $video ) : ?>
-				<article class="dhps-tp-card"
+				<?php foreach ( $cat['videos'] as $video ) :
+					$is_hidden = ( $lazy_count > 0 && $video_index >= $lazy_count );
+				?>
+				<article class="dhps-tp-card<?php echo $is_hidden ? ' dhps-tp-card--lazy-hidden' : ''; ?>"
+						 <?php echo $is_hidden ? ' hidden' : ''; ?>
 						 data-category="<?php echo esc_attr( $cat_index ); ?>"
-						 data-video-id="<?php echo esc_attr( $video['video_id'] ); ?>">
+						 data-video-id="<?php echo esc_attr( $video['video_id'] ); ?>"
+						 data-video-index="<?php echo esc_attr( $video_index ); ?>">
 					<div class="dhps-tp-card__poster" role="button" tabindex="0"
 						 aria-label="<?php echo esc_attr( 'Video abspielen: ' . $video['titel'] ); ?>"
 						 data-video-slug="<?php echo esc_attr( $video['video_slug'] ); ?>"
@@ -114,10 +147,10 @@ wp_enqueue_script( 'dhps-tp-js' );
 							 class="dhps-tp-card__img"
 							 loading="lazy" width="500" height="291">
 						<?php endif; ?>
-						<span class="dhps-tp-card__play-btn" aria-hidden="true">
+						<span class="dhps-tp-card__play-btn" aria-hidden="true" style="color: var(--dhps-color-steuern)">
 							<svg width="48" height="48" viewBox="0 0 64 64">
 								<circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.9)"/>
-								<polygon points="26,20 26,44 46,32" fill="#2e8a37"/>
+								<polygon points="26,20 26,44 46,32" fill="currentColor"/>
 							</svg>
 						</span>
 					</div>
@@ -128,9 +161,17 @@ wp_enqueue_script( 'dhps-tp-js' );
 						<?php endif; ?>
 					</div>
 				</article>
-				<?php endforeach; ?>
+				<?php
+					$video_index++;
+				endforeach; ?>
 			<?php endforeach; ?>
 		</div>
+
+		<?php if ( $lazy_count > 0 ) : ?>
+		<button class="dhps-tp-load-more dhps-btn dhps-btn--primary">
+			<?php echo esc_html( 'Weitere Videos laden' ); ?>
+		</button>
+		<?php endif; ?>
 	</section>
 	<?php endif; ?>
 

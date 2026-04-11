@@ -233,18 +233,416 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 
 		/*
 		 * ---------------------------------------------------------------
-		 * Section 2: Darstellung
+		 * Section 2: Video-Layout (nur fuer TP/TPT)
+		 * ---------------------------------------------------------------
+		 */
+		$video_services = array( 'tp', 'tpt' );
+		if ( in_array( $this->get_service_key(), $video_services, true ) ) {
+			$this->start_controls_section(
+				'section_video_layout',
+				array(
+					'label' => 'Video-Layout',
+					'tab'   => \Elementor\Controls_Manager::TAB_CONTENT,
+				)
+			);
+
+			// Grid-Spalten (1-4).
+			$this->add_control( 'tp_columns', array(
+				'label'   => 'Spalten',
+				'type'    => \Elementor\Controls_Manager::SELECT,
+				'options' => array(
+					'1' => '1 Spalte',
+					'2' => '2 Spalten',
+					'3' => '3 Spalten',
+					'4' => '4 Spalten',
+				),
+				'default' => '3',
+			) );
+
+			// Lazy Loading Count.
+			$this->add_control( 'tp_lazy_count', array(
+				'label'       => 'Initiale Videos',
+				'description' => 'Anzahl der sofort sichtbaren Videos (0 = alle)',
+				'type'        => \Elementor\Controls_Manager::NUMBER,
+				'default'     => 0,
+				'min'         => 0,
+				'max'         => 100,
+			) );
+
+			// Lazy Loading Mode.
+			$this->add_control( 'tp_lazy_mode', array(
+				'label'     => 'Nachladen',
+				'type'      => \Elementor\Controls_Manager::SELECT,
+				'options'   => array(
+					'manual' => 'Manuell (Button)',
+					'auto'   => 'Automatisch (Scroll)',
+				),
+				'default'   => 'manual',
+				'condition' => array( 'tp_lazy_count!' => 0 ),
+			) );
+
+			// Style Preset.
+			$this->add_control( 'tp_style', array(
+				'label'   => 'Stil',
+				'type'    => \Elementor\Controls_Manager::SELECT,
+				'options' => array(
+					'default' => 'Standard',
+					'minimal' => 'Minimal',
+					'shadow'  => 'Schatten',
+				),
+				'default' => 'default',
+			) );
+
+			$this->end_controls_section();
+		}
+
+		/*
+		 * ---------------------------------------------------------------
+		 * Section 3: Stil - Ueberschriften
 		 * ---------------------------------------------------------------
 		 */
 		$this->start_controls_section(
-			'section_style',
+			'section_style_heading',
 			array(
-				'label' => 'Darstellung',
+				'label' => 'Ueberschriften',
 				'tab'   => \Elementor\Controls_Manager::TAB_STYLE,
 			)
 		);
 
-		// Innenabstand (nur sichtbar bei Card-Layout).
+		$this->add_control(
+			'heading_color',
+			array(
+				'label'     => 'Farbe',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-tp-featured__heading, {{WRAPPER}} .dhps-tp-catalog__heading' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'heading_font_size',
+			array(
+				'label'      => 'Schriftgroesse',
+				'type'       => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => array( 'px', 'em', 'rem' ),
+				'range'      => array(
+					'px' => array( 'min' => 10, 'max' => 48 ),
+					'em' => array( 'min' => 0.5, 'max' => 3, 'step' => 0.1 ),
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-tp-featured__heading, {{WRAPPER}} .dhps-tp-catalog__heading' => 'font-size: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'heading_font_weight',
+			array(
+				'label'   => 'Schriftstaerke',
+				'type'    => \Elementor\Controls_Manager::SELECT,
+				'options' => array(
+					''    => 'Standard',
+					'400' => 'Normal (400)',
+					'500' => 'Medium (500)',
+					'600' => 'Semibold (600)',
+					'700' => 'Bold (700)',
+				),
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-tp-featured__heading, {{WRAPPER}} .dhps-tp-catalog__heading' => 'font-weight: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'heading_margin_bottom',
+			array(
+				'label'      => 'Abstand unten',
+				'type'       => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => array( 'px', 'em' ),
+				'range'      => array(
+					'px' => array( 'min' => 0, 'max' => 60 ),
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-tp-featured__heading, {{WRAPPER}} .dhps-tp-catalog__heading' => 'margin-bottom: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->end_controls_section();
+
+		/*
+		 * ---------------------------------------------------------------
+		 * Section 4: Stil - Cards
+		 * ---------------------------------------------------------------
+		 */
+		$this->start_controls_section(
+			'section_style_card',
+			array(
+				'label' => 'Video-Cards',
+				'tab'   => \Elementor\Controls_Manager::TAB_STYLE,
+			)
+		);
+
+		$this->add_control(
+			'card_background',
+			array(
+				'label'     => 'Hintergrund',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-tp-card' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'card_border_color',
+			array(
+				'label'     => 'Rahmenfarbe',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-tp-card' => 'border-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'card_border_radius',
+			array(
+				'label'      => 'Eckenradius',
+				'type'       => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => array( 'px', 'em', '%' ),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-tp-card' => 'border-radius: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'card_padding',
+			array(
+				'label'      => 'Innenabstand (Body)',
+				'type'       => \Elementor\Controls_Manager::DIMENSIONS,
+				'size_units' => array( 'px', 'em' ),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-tp-card__body' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'card_gap',
+			array(
+				'label'      => 'Abstand zwischen Cards',
+				'type'       => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => array( 'px' ),
+				'range'      => array(
+					'px' => array( 'min' => 0, 'max' => 60 ),
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-tp-grid' => 'gap: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->end_controls_section();
+
+		/*
+		 * ---------------------------------------------------------------
+		 * Section 5: Stil - Text
+		 * ---------------------------------------------------------------
+		 */
+		$this->start_controls_section(
+			'section_style_text',
+			array(
+				'label' => 'Text',
+				'tab'   => \Elementor\Controls_Manager::TAB_STYLE,
+			)
+		);
+
+		$this->add_control(
+			'title_color',
+			array(
+				'label'     => 'Titel-Farbe',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-tp-card__title, {{WRAPPER}} .dhps-tp-video__title' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'title_font_size',
+			array(
+				'label'      => 'Titel-Groesse',
+				'type'       => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => array( 'px', 'em', 'rem' ),
+				'range'      => array(
+					'px' => array( 'min' => 10, 'max' => 32 ),
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-tp-card__title, {{WRAPPER}} .dhps-tp-video__title' => 'font-size: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'teaser_color',
+			array(
+				'label'     => 'Teaser-Farbe',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-tp-card__teaser, {{WRAPPER}} .dhps-tp-video__teaser' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'date_color',
+			array(
+				'label'     => 'Datum-Farbe',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-tp-card__date, {{WRAPPER}} .dhps-tp-video__date' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->end_controls_section();
+
+		/*
+		 * ---------------------------------------------------------------
+		 * Section 6: Stil - Button
+		 * ---------------------------------------------------------------
+		 */
+		$this->start_controls_section(
+			'section_style_button',
+			array(
+				'label' => 'Buttons',
+				'tab'   => \Elementor\Controls_Manager::TAB_STYLE,
+			)
+		);
+
+		$this->add_control(
+			'btn_heading_filter',
+			array(
+				'label' => 'Filter-Buttons',
+				'type'  => \Elementor\Controls_Manager::HEADING,
+			)
+		);
+
+		$this->add_control(
+			'filter_btn_color',
+			array(
+				'label'     => 'Textfarbe',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-filter-bar__btn' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'filter_btn_active_bg',
+			array(
+				'label'     => 'Aktiv: Hintergrund',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-filter-bar__btn--active, {{WRAPPER}} .dhps-filter-bar__btn[aria-pressed="true"]' => 'background-color: {{VALUE}}; border-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'filter_btn_active_color',
+			array(
+				'label'     => 'Aktiv: Textfarbe',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-filter-bar__btn--active, {{WRAPPER}} .dhps-filter-bar__btn[aria-pressed="true"]' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'filter_btn_border_radius',
+			array(
+				'label'      => 'Eckenradius',
+				'type'       => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => array( 'px' ),
+				'range'      => array(
+					'px' => array( 'min' => 0, 'max' => 30 ),
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-filter-bar__btn' => 'border-radius: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'btn_heading_loadmore',
+			array(
+				'label'     => 'Laden-Button',
+				'type'      => \Elementor\Controls_Manager::HEADING,
+				'separator' => 'before',
+			)
+		);
+
+		$this->add_control(
+			'loadmore_btn_bg',
+			array(
+				'label'     => 'Hintergrund',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-tp-load-more' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'loadmore_btn_color',
+			array(
+				'label'     => 'Textfarbe',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-tp-load-more' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'loadmore_btn_border_radius',
+			array(
+				'label'      => 'Eckenradius',
+				'type'       => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => array( 'px' ),
+				'range'      => array(
+					'px' => array( 'min' => 0, 'max' => 30 ),
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-tp-load-more' => 'border-radius: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->end_controls_section();
+
+		/*
+		 * ---------------------------------------------------------------
+		 * Section 7: Stil - Container (Card-Layout)
+		 * ---------------------------------------------------------------
+		 */
+		$this->start_controls_section(
+			'section_style_container',
+			array(
+				'label'     => 'Container',
+				'tab'       => \Elementor\Controls_Manager::TAB_STYLE,
+				'condition' => array(
+					'layout' => 'card',
+				),
+			)
+		);
+
 		$this->add_control(
 			'container_padding',
 			array(
@@ -254,13 +652,9 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 				'selectors'  => array(
 					'{{WRAPPER}} .dhps-card' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
 				),
-				'condition'  => array(
-					'layout' => 'card',
-				),
 			)
 		);
 
-		// Eckenradius.
 		$this->add_control(
 			'container_border_radius',
 			array(
@@ -472,8 +866,30 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 			}
 		}
 
+		// TP-spezifische Settings als Filter setzen (werden im Template ausgelesen).
+		$video_services = array( 'tp', 'tpt' );
+		if ( in_array( $service_key, $video_services, true ) ) {
+			$tp_columns    = $settings['tp_columns'] ?? '3';
+			$tp_lazy_count = $settings['tp_lazy_count'] ?? 0;
+			$tp_lazy_mode  = $settings['tp_lazy_mode'] ?? 'manual';
+			$tp_style      = $settings['tp_style'] ?? 'default';
+
+			add_filter( 'dhps_tp_grid_columns', function () use ( $tp_columns ) { return $tp_columns; } );
+			add_filter( 'dhps_tp_lazy_count', function () use ( $tp_lazy_count ) { return $tp_lazy_count; } );
+			add_filter( 'dhps_tp_lazy_mode', function () use ( $tp_lazy_mode ) { return $tp_lazy_mode; } );
+			add_filter( 'dhps_tp_style', function () use ( $tp_style ) { return $tp_style; } );
+		}
+
 		// 5. Inhalt ueber die Content-Pipeline abrufen, parsen und rendern.
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML stammt vom Deubner-API-Endpoint und wird ueber die Pipeline verarbeitet.
 		echo self::$pipeline->render_service( $service_key, $service['endpoint'], $params, $cache_ttl, $layout, $custom_class );
+
+		// TP-Filter wieder entfernen, damit sie nicht in andere Widget-Instanzen leaken.
+		if ( in_array( $service_key, $video_services, true ) ) {
+			remove_all_filters( 'dhps_tp_grid_columns' );
+			remove_all_filters( 'dhps_tp_lazy_count' );
+			remove_all_filters( 'dhps_tp_lazy_mode' );
+			remove_all_filters( 'dhps_tp_style' );
+		}
 	}
 }

@@ -56,6 +56,10 @@
   max-width: 100%;
   height: auto;
 }
+.dhps .dhps-db-header__logo {
+  max-width: 50px;
+  height: auto;
+}
 .dhps h1,
 .dhps h2,
 .dhps h3,

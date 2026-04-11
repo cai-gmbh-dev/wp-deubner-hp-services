@@ -149,11 +149,9 @@ class DHPS_Admin {
             wp_enqueue_style( 'dhps-admin-css' );
             wp_enqueue_style( 'dhps-ui-css' );
 
-            // Dashboard-spezifische Assets.
-            if ( false !== strpos( $current_screen->id, 'dhps_dashboard' ) ) {
-                wp_enqueue_style( 'dhps-dashboard-css' );
-                wp_enqueue_script( 'dhps-admin-js' );
-            }
+            // Dashboard + Service-Config Styles (Deubner-Branding).
+            wp_enqueue_style( 'dhps-dashboard-css' );
+            wp_enqueue_script( 'dhps-admin-js' );
         }
     }
 

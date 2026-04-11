@@ -85,6 +85,13 @@
   --dhps-grid-gap:            20px;
 
   /* -------------------------------------------------------
+   * Formular-Inputs (Admin)
+   * ------------------------------------------------------- */
+  --dhps-input-bg:              #ffffff;
+  --dhps-input-color:           var(--dhps-color-text);
+  --dhps-input-border:          var(--dhps-color-border);
+
+  /* -------------------------------------------------------
    * Radien & Schatten (Deubner: scharfe Kanten)
    * ------------------------------------------------------- */
   --dhps-radius:              0;

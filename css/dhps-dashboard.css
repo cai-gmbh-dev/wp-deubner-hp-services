@@ -11,21 +11,54 @@
    Dashboard Wrapper - Weisser Hintergrund, keine WP-Grau-Flaeche
    ========================================================================== */
 
-.dhps-dashboard-wrap {
+/* Override: .dhps input aus dhps_admin.css killt Button-Styles */
+.dhps input.dhps-db-btn,
+.dhps input.dhps-db-btn--config {
+	background: var(--dhps-color-steuern, #0AA245) !important;
+	color: #fff !important;
+	border: none !important;
+	cursor: pointer;
+}
+
+.dhps input.dhps-db-btn--config:hover {
+	background: var(--dhps-color-steuern-hover, #077231) !important;
+}
+
+/* Override: dhps_admin.css Reset-Regeln fuer das Deubner-Layout aufheben */
+.dhps.dhps-dashboard-wrap {
 	margin-left: 0;
 	padding: 0;
 	background: #fff;
 	min-height: 100vh;
+	font-size: 14px;
 }
 
-.dhps-dashboard-wrap .dhps-dashboard {
+.dhps.dhps-dashboard-wrap p,
+.dhps.dhps-dashboard-wrap ul,
+.dhps.dhps-dashboard-wrap ol {
+	margin: 0 0 8px;
+}
+
+.dhps.dhps-dashboard-wrap h2,
+.dhps.dhps-dashboard-wrap h3,
+.dhps.dhps-dashboard-wrap h4 {
+	margin: 0 0 12px;
+}
+
+/* Override: max-width Beschraenkung aus dhps_admin.css aufheben */
+.dhps.dhps-dashboard-wrap .dhps-header,
+.dhps.dhps-dashboard-wrap .dhps-content-area {
+	max-width: none;
+}
+
+.dhps.dhps-dashboard-wrap .dhps-dashboard {
 	max-width: 1200px;
 	margin: 0 auto;
 	padding: 0 20px 40px;
 }
 
 /* WP Admin notices ausblenden */
-.dhps-dashboard-wrap .dhps-notice-hook-element {
+.dhps.dhps-dashboard-wrap .dhps-notice-hook-element {
 	display: none !important;
 }
 
@@ -366,6 +399,187 @@
 
 .dhps-db-info a {
 	color: var(--dhps-color-steuern, #0AA245);
+}
+
+/* ==========================================================================
+   Service-Config Seite
+   ========================================================================== */
+
+.dhps-cfg-header {
+	display: flex;
+	gap: 24px;
+	align-items: center;
+	padding: 24px;
+	background: #fff;
+	border: 1px solid var(--dhps-color-border, #ddd);
+	box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.18);
+	margin-bottom: 24px;
+}
+
+.dhps-cfg-header__image {
+	flex-shrink: 0;
+	width: 140px;
+}
+
+.dhps-cfg-header__image img {
+	max-width: 100%;
+	height: auto;
+}
+
+.dhps-cfg-header__info {
+	flex: 1;
+}
+
+.dhps-cfg-header__title {
+	font-family: var(--dhps-font-family, "Lato", sans-serif);
+	font-size: 22px;
+	font-weight: 700;
+	color: var(--dhps-color-text, #333);
+	margin: 0 0 8px;
+}
+
+.dhps-cfg-header__meta {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.dhps-cfg-header__shortcode {
+	font-size: 13px;
+	color: var(--dhps-color-text-muted, #777);
+	margin: 0;
+}
+
+.dhps-cfg-header__shortcode code {
+	background: var(--dhps-color-bg, #f5f5f5);
+	padding: 2px 8px;
+	font-size: 13px;
+}
+
+/* Config Form */
+.dhps-cfg-form {
+	background: #fff;
+	border: 1px solid var(--dhps-color-border, #ddd);
+	padding: 24px;
+	margin-bottom: 20px;
+}
+
+.dhps-cfg-form--extra {
+	border-top: 3px solid var(--dhps-color-border, #ddd);
+}
+
+.dhps-cfg-form__title {
+	font-family: var(--dhps-font-family, "Lato", sans-serif);
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--dhps-color-text, #333);
+	margin: 0 0 20px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid var(--dhps-color-border, #ddd);
+}
+
+.dhps-cfg-field {
+	margin-bottom: 16px;
+}
+
+.dhps-cfg-field__label {
+	display: block;
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--dhps-color-text, #333);
+	margin-bottom: 4px;
+}
+
+.dhps-cfg-field__input,
+.dhps-cfg-field__select,
+.dhps-cfg-field__textarea {
+	width: 100%;
+	max-width: 400px;
+	padding: 8px 12px;
+	border: 1px solid var(--dhps-color-border, #ddd);
+	border-radius: 0;
+	font-size: 14px;
+	font-family: var(--dhps-font-family, "Lato", sans-serif);
+	background: #fff;
+	transition: border-color 0.15s;
+}
+
+.dhps-cfg-field__input:focus,
+.dhps-cfg-field__select:focus,
+.dhps-cfg-field__textarea:focus {
+	border-color: var(--dhps-color-steuern, #0AA245);
+	outline: none;
+	box-shadow: 0 0 0 1px var(--dhps-color-steuern, #0AA245);
+}
+
+.dhps-cfg-field__textarea {
+	max-width: 100%;
+}
+
+.dhps-cfg-field__desc {
+	font-size: 12px;
+	color: var(--dhps-color-meta, #999);
+	margin: 4px 0 0;
+}
+
+.dhps-cfg-form__actions {
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid var(--dhps-color-border, #ddd);
+}
+
+/* Notice */
+.dhps-db-notice {
+	padding: 10px 16px;
+	margin-bottom: 16px;
+	font-size: 13px;
+}
+
+.dhps-db-notice--success {
+	background: var(--dhps-color-steuern-light, #e8f5ed);
+	color: var(--dhps-color-steuern-dark, #055022);
+	border-left: 3px solid var(--dhps-color-steuern, #0AA245);
+}
+
+/* Kategorie-Farben fuer Config-Header */
+.dhps-db-category--recht .dhps-cfg-header {
+	border-top: 3px solid var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-db-category--recht .dhps-cfg-field__input:focus,
+.dhps-db-category--recht .dhps-cfg-field__select:focus {
+	border-color: var(--dhps-color-recht, #0054A6);
+	box-shadow: 0 0 0 1px var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-db-category--steuern .dhps-cfg-header {
+	border-top: 3px solid var(--dhps-color-steuern, #0AA245);
+}
+
+.dhps-db-category--medizin .dhps-cfg-header {
+	border-top: 3px solid var(--dhps-color-medizin, #0097a7);
+}
+
+.dhps-db-category--medizin .dhps-cfg-field__input:focus,
+.dhps-db-category--medizin .dhps-cfg-field__select:focus {
+	border-color: var(--dhps-color-medizin, #0097a7);
+	box-shadow: 0 0 0 1px var(--dhps-color-medizin, #0097a7);
+}
+
+@media (max-width: 782px) {
+	.dhps-cfg-header {
+		flex-direction: column;
+		text-align: center;
+	}
+
+	.dhps-cfg-header__image {
+		width: 100px;
+	}
+
+	.dhps-cfg-header__meta {
+		justify-content: center;
+	}
 }
 
 /* ==========================================================================

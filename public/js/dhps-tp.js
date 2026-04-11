@@ -50,8 +50,11 @@
 				poster.closest( '.dhps-tp-card__poster' ) ||
 				poster;
 
-			// Bereits geladen?
-			if ( playerContainer.querySelector( 'iframe' ) ) {
+			// Bereits geladen? (Nur im inline-Modus blockieren, nicht im Modal-Modus.)
+			var svcContainer = poster.closest( '.dhps-service--tp' );
+			var isModal = svcContainer && ( svcContainer.getAttribute( 'data-video-mode' ) || '' ).trim() === 'modal';
+
+			if ( ! isModal && playerContainer.querySelector( 'iframe' ) ) {
 				return;
 			}
 
@@ -89,8 +92,10 @@
 	 */
 	function loadVideoIframe( playerContainer, poster, videoSlug, posterUrl, vModus, config ) {
 		// Pruefen ob Modal-Modus aktiv ist.
-		var serviceContainer = playerContainer.closest( '.dhps-service--tp' );
-		var videoMode = serviceContainer ? serviceContainer.getAttribute( 'data-video-mode' ) : null;
+		// NUR wenn explizit data-video-mode="modal" gesetzt (Elementor-Control).
+		// Suche den naechsten Service-Container (nicht document-weit).
+		var serviceContainer = poster.closest( '.dhps-service--tp' );
+		var videoMode = serviceContainer ? ( serviceContainer.getAttribute( 'data-video-mode' ) || '' ).trim() : '';
 		var useModal  = ( videoMode === 'modal' );
 
 		var formData = new FormData();
@@ -131,9 +136,40 @@
 						posterEl.style.display = 'none';
 					}
 
-					// iframe einfuegen.
+					// Playing-State setzen (deaktiviert Hover-Effekte).
+					var card = playerContainer.closest( '.dhps-tp-card' ) ||
+						playerContainer.closest( '.dhps-tp-video' );
+					if ( card ) {
+						card.classList.add( 'dhps-tp--playing' );
+					}
+					playerContainer.classList.add( 'dhps-tp--playing' );
+
+					// Close-Button erstellen.
+					var closeBtn = document.createElement( 'button' );
+					closeBtn.className = 'dhps-tp-video__close';
+					closeBtn.setAttribute( 'aria-label', 'Video schliessen' );
+					closeBtn.innerHTML = '&times;';
+					closeBtn.addEventListener( 'click', function ( ev ) {
+						ev.stopPropagation();
+
+						// iframe entfernen (Video stoppen).
+						iframe.remove();
+						closeBtn.remove();
+
+						// Poster wiederherstellen.
+						posterEl.style.display = '';
+
+						// Playing-State entfernen.
+						if ( card ) {
+							card.classList.remove( 'dhps-tp--playing' );
+						}
+						playerContainer.classList.remove( 'dhps-tp--playing' );
+					} );
+
+					// iframe und Close-Button einfuegen.
 					var parent = posterEl.parentElement || playerContainer;
 					parent.appendChild( iframe );
+					parent.appendChild( closeBtn );
 				}
 			} )
 			.catch( function () {

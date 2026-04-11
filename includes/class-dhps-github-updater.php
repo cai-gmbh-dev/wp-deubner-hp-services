@@ -113,9 +113,58 @@ class DHPS_GitHub_Updater {
      * @return void
      */
     public function init(): void {
+        // Primaerer Update-Check: WordPress 5.8+ Update URI Mechanismus.
+        // Wird von WP fuer Plugins mit Update URI Header aufgerufen.
+        add_filter( 'update_plugins_github.com', array( $this, 'check_update_uri' ), 10, 4 );
+
+        // Fallback: Klassischer Update-Check via Transient-Filter.
         add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'check_for_update' ) );
+
         add_filter( 'plugins_api', array( $this, 'plugin_info' ), 10, 3 );
         add_filter( 'upgrader_source_selection', array( $this, 'fix_directory_name' ), 10, 4 );
+    }
+
+    /**
+     * WordPress 5.8+ Update URI Handler.
+     *
+     * Wird von WordPress via 'update_plugins_github.com' aufgerufen
+     * wenn das Plugin einen Update URI mit github.com hostname hat.
+     *
+     * @since 0.9.6
+     *
+     * @param array|false $update     Update-Daten oder false.
+     * @param array       $plugin_data Plugin-Header-Daten.
+     * @param string      $plugin_file Plugin-Datei relativ zu plugins/.
+     * @param string[]    $locales     Installierte Locales.
+     *
+     * @return array|false Update-Daten oder false wenn kein Update.
+     */
+    public function check_update_uri( $update, array $plugin_data, string $plugin_file, array $locales ) {
+        // Nur fuer dieses Plugin reagieren.
+        if ( $plugin_file !== $this->plugin_basename ) {
+            return $update;
+        }
+
+        $release = $this->get_latest_release();
+
+        if ( null === $release || empty( $release['tag_name'] ) ) {
+            return $update;
+        }
+
+        $latest_version = $this->normalize_version( $release['tag_name'] );
+
+        if ( version_compare( $latest_version, $this->current_version, '>' ) ) {
+            return array(
+                'slug'         => $this->plugin_slug,
+                'version'      => $latest_version,
+                'url'          => $release['html_url'],
+                'package'      => $release['zipball_url'],
+                'requires'     => '6.0',
+                'requires_php' => '8.0',
+            );
+        }
+
+        return $update;
     }
 
     /**

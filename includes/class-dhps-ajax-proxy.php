@@ -371,8 +371,13 @@ class DHPS_AJAX_Proxy {
 			wp_send_json_error( array( 'message' => 'Fehlender Video-Slug.' ), 400 );
 		}
 
-		// kdnr serverseitig aus der Datenbank holen.
+		// Authentifizierung serverseitig aus der Datenbank holen.
+		// Primaer: kdnr (TaxPlain Teaser). Fallback: OTA (TaxPlain Videos).
 		$kdnr = get_option( 'dhps_tp_kdnr', '' );
+
+		if ( '' === $kdnr ) {
+			$kdnr = get_option( 'dhps_ota_tp', '' );
+		}
 
 		if ( '' === $kdnr ) {
 			wp_send_json_error( array( 'message' => 'Service nicht konfiguriert.' ), 400 );

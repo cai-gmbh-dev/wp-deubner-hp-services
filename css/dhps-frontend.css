@@ -1673,6 +1673,20 @@
 }
 
 /* ==========================================================================
+   TP: Video Modal
+   ========================================================================== */
+
+.dhps-video-modal { position: fixed; inset: 0; z-index: 999999; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: opacity 0.25s, visibility 0.25s; }
+.dhps-video-modal--active { opacity: 1; visibility: visible; }
+.dhps-video-modal__overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); }
+.dhps-video-modal__content { position: relative; width: 90vw; max-width: 900px; transform: scale(0.95); transition: transform 0.25s; }
+.dhps-video-modal--active .dhps-video-modal__content { transform: scale(1); }
+.dhps-video-modal__close { position: absolute; top: -40px; right: 0; background: none; border: none; color: #fff; font-size: 32px; cursor: pointer; padding: 4px 8px; line-height: 1; z-index: 1; }
+.dhps-video-modal__close:hover { color: var(--dhps-color-steuern, #0AA245); }
+.dhps-video-modal__player { position: relative; padding-top: 56.25%; background: #000; }
+.dhps-video-modal__player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* ==========================================================================
    TP: Responsive
    ========================================================================== */
 

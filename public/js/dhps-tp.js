@@ -82,8 +82,17 @@
 
 	/**
 	 * Laedt den Video-iframe ueber den AJAX-Proxy.
+	 *
+	 * Wenn der uebergeordnete .dhps-service--tp Container das Attribut
+	 * data-video-mode="modal" hat, wird das Video in einem zentrierten
+	 * Fullscreen-Overlay-Modal geoeffnet statt inline den Poster zu ersetzen.
 	 */
 	function loadVideoIframe( playerContainer, poster, videoSlug, posterUrl, vModus, config ) {
+		// Pruefen ob Modal-Modus aktiv ist.
+		var serviceContainer = playerContainer.closest( '.dhps-service--tp' );
+		var videoMode = serviceContainer ? serviceContainer.getAttribute( 'data-video-mode' ) : null;
+		var useModal  = ( videoMode === 'modal' );
+
 		var formData = new FormData();
 		formData.append( 'action', 'dhps_tp_video_src' );
 		formData.append( 'nonce', config.nonce );
@@ -99,6 +108,12 @@
 			.then( function ( response ) { return response.json(); } )
 			.then( function ( data ) {
 				if ( data.success && data.data && data.data.src ) {
+					if ( useModal ) {
+						var title = poster.getAttribute( 'aria-label' ) || 'Video';
+						openVideoModal( data.data.src, title );
+						return;
+					}
+
 					var iframe = document.createElement( 'iframe' );
 					iframe.className = 'dhps-tp-video__iframe';
 					iframe.src = data.data.src;
@@ -124,6 +139,138 @@
 			.catch( function () {
 				// Stille Fehlerbehandlung - Poster bleibt sichtbar.
 			} );
+	}
+
+	/* ======================================================================
+	   Video-Modal: Fullscreen-Overlay fuer Video-Wiedergabe.
+	   ====================================================================== */
+
+	/** @type {HTMLElement|null} Singleton-Modal-Element. */
+	var videoModal = null;
+
+	/** @type {HTMLElement|null} Element das vor dem Modal-Open Fokus hatte. */
+	var previousFocus = null;
+
+	/**
+	 * Erstellt das Modal-DOM (einmalig) und gibt es zurueck.
+	 *
+	 * @return {HTMLElement} Das .dhps-video-modal Element.
+	 */
+	function getOrCreateModal() {
+		if ( videoModal ) {
+			return videoModal;
+		}
+
+		videoModal = document.createElement( 'div' );
+		videoModal.className = 'dhps-video-modal';
+		videoModal.setAttribute( 'role', 'dialog' );
+		videoModal.setAttribute( 'aria-modal', 'true' );
+		videoModal.setAttribute( 'aria-label', 'Video' );
+
+		videoModal.innerHTML =
+			'<div class="dhps-video-modal__overlay"></div>' +
+			'<div class="dhps-video-modal__content">' +
+				'<button class="dhps-video-modal__close" aria-label="Schliessen">&times;</button>' +
+				'<div class="dhps-video-modal__player"></div>' +
+			'</div>';
+
+		document.body.appendChild( videoModal );
+
+		// Schliessen per Klick auf Overlay.
+		videoModal.querySelector( '.dhps-video-modal__overlay' ).addEventListener( 'click', closeVideoModal );
+
+		// Schliessen per Close-Button.
+		videoModal.querySelector( '.dhps-video-modal__close' ).addEventListener( 'click', closeVideoModal );
+
+		// Keyboard: Escape + Focus-Trap.
+		videoModal.addEventListener( 'keydown', function ( e ) {
+			if ( e.key === 'Escape' ) {
+				e.stopPropagation();
+				closeVideoModal();
+				return;
+			}
+
+			// Focus-Trap: Tab innerhalb des Modals halten.
+			if ( e.key === 'Tab' ) {
+				var focusable = videoModal.querySelectorAll(
+					'button, [href], iframe, [tabindex]:not([tabindex="-1"])'
+				);
+				if ( focusable.length === 0 ) {
+					return;
+				}
+				var first = focusable[0];
+				var last  = focusable[ focusable.length - 1 ];
+
+				if ( e.shiftKey ) {
+					if ( document.activeElement === first ) {
+						e.preventDefault();
+						last.focus();
+					}
+				} else {
+					if ( document.activeElement === last ) {
+						e.preventDefault();
+						first.focus();
+					}
+				}
+			}
+		} );
+
+		return videoModal;
+	}
+
+	/**
+	 * Oeffnet das Video-Modal mit dem angegebenen iframe-src.
+	 *
+	 * @param {string} iframeSrc - URL fuer den Video-iframe.
+	 * @param {string} title     - Titel fuer das iframe-title-Attribut.
+	 */
+	function openVideoModal( iframeSrc, title ) {
+		var modal  = getOrCreateModal();
+		var player = modal.querySelector( '.dhps-video-modal__player' );
+
+		// Vorherigen iframe entfernen.
+		player.innerHTML = '';
+
+		var iframe = document.createElement( 'iframe' );
+		iframe.src = iframeSrc;
+		iframe.setAttribute( 'allowfullscreen', '' );
+		iframe.setAttribute( 'title', title || 'Video' );
+		player.appendChild( iframe );
+
+		// Fokus merken und Modal anzeigen.
+		previousFocus = document.activeElement;
+		modal.classList.add( 'dhps-video-modal--active' );
+		document.body.style.overflow = 'hidden';
+
+		// Fokus auf Close-Button setzen.
+		var closeBtn = modal.querySelector( '.dhps-video-modal__close' );
+		if ( closeBtn ) {
+			closeBtn.focus();
+		}
+	}
+
+	/**
+	 * Schliesst das Video-Modal und raeumt auf.
+	 */
+	function closeVideoModal() {
+		if ( ! videoModal ) {
+			return;
+		}
+
+		videoModal.classList.remove( 'dhps-video-modal--active' );
+		document.body.style.overflow = '';
+
+		// iframe entfernen (Video stoppen).
+		var player = videoModal.querySelector( '.dhps-video-modal__player' );
+		if ( player ) {
+			player.innerHTML = '';
+		}
+
+		// Fokus zuruecksetzen.
+		if ( previousFocus && typeof previousFocus.focus === 'function' ) {
+			previousFocus.focus();
+		}
+		previousFocus = null;
 	}
 
 	/**

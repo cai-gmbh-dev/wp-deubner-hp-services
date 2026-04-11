@@ -41,6 +41,7 @@ $grid_columns = absint( apply_filters( 'dhps_tp_grid_columns', 3 ) );
 $lazy_count   = absint( apply_filters( 'dhps_tp_lazy_count', 0 ) );
 $lazy_mode    = sanitize_key( apply_filters( 'dhps_tp_lazy_mode', 'manual' ) );
 $tp_style     = sanitize_key( apply_filters( 'dhps_tp_style', 'default' ) );
+$video_mode   = sanitize_key( apply_filters( 'dhps_tp_video_mode', 'inline' ) );
 
 // Sicherheitsgrenzen.
 if ( $grid_columns < 1 || $grid_columns > 6 ) {
@@ -63,7 +64,8 @@ $video_index = 0;
 	 data-style="<?php echo esc_attr( $tp_style ); ?>"
 	 data-columns="<?php echo esc_attr( $grid_columns ); ?>"
 	 data-lazy-count="<?php echo esc_attr( $lazy_count ); ?>"
-	 data-lazy-mode="<?php echo esc_attr( $lazy_mode ); ?>">
+	 data-lazy-mode="<?php echo esc_attr( $lazy_mode ); ?>"
+	 data-video-mode="<?php echo esc_attr( $video_mode ); ?>">
 
 	<?php if ( $featured ) : ?>
 	<!-- Featured Video -->

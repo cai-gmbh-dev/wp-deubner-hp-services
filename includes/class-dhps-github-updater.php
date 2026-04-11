@@ -269,7 +269,7 @@ class DHPS_GitHub_Updater {
         // Transient-Cache pruefen.
         $cached = get_transient( $this->transient_key );
 
-        if ( false !== $cached && is_array( $cached ) ) {
+        if ( false !== $cached && is_array( $cached ) && ! empty( $cached['tag_name'] ) ) {
             $this->github_data = $cached;
             return $this->github_data;
         }

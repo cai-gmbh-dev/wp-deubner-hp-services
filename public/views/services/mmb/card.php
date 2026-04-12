@@ -19,7 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $categories    = $data['categories'] ?? array();
 $search_config = $data['search_config'] ?? array();
-$service_tag   = $data['service_tag'] ?? 'mmb';
+$service_tag    = $data['service_tag'] ?? 'mmb';
+$download_label = ( 'mil' === $service_tag ) ? 'Infografik herunterladen' : 'PDF herunterladen';
+$is_mil         = ( 'mil' === $service_tag );
 
 wp_enqueue_script( 'dhps-mmb-js' );
 ?>
@@ -127,18 +129,25 @@ wp_enqueue_script( 'dhps-mmb-js' );
 						<?php if ( ! empty( $sheet['description'] ) ) : ?>
 						<p class="dhps-mmb-card-item__desc"><?php echo esc_html( mb_strimwidth( $sheet['description'], 0, 120, '...' ) ); ?></p>
 						<?php endif; ?>
+						<?php
+						if ( $is_mil && ! empty( $sheet['pdf_params']['merkblatt'] ) ) {
+							$pdf_href = 'https://www.deubner-online.de/einbau/mil/content/merkblaetter/' . $sheet['pdf_params']['merkblatt'] . '.pdf';
+						} else {
+							$pdf_href = admin_url( 'admin-ajax.php' ) . '?' . http_build_query( array_merge(
+								array( 'action' => 'dhps_mmb_pdf', 'nonce' => wp_create_nonce( 'dhps_mmb_nonce' ), 'service' => $service_tag ),
+								$sheet['pdf_params']
+							) );
+						}
+						?>
 						<a class="dhps-mmb-card-item__download"
-						   href="<?php echo esc_url( admin_url( 'admin-ajax.php' ) . '?' . http_build_query( array_merge(
-							   array( 'action' => 'dhps_mmb_pdf', 'nonce' => wp_create_nonce( 'dhps_mmb_nonce' ) ),
-							   $sheet['pdf_params']
-						   ) ) ); ?>"
+						   href="<?php echo esc_url( $pdf_href ); ?>"
 						   target="_blank" rel="noopener">
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 								<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
 								<polyline points="7 10 12 15 17 10"/>
 								<line x1="12" y1="15" x2="12" y2="3"/>
 							</svg>
-							PDF herunterladen
+							<?php echo esc_html( $download_label ); ?>
 						</a>
 					</div>
 					<?php endforeach; ?>

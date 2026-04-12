@@ -428,6 +428,102 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 
 		/*
 		 * ---------------------------------------------------------------
+		 * Section 3b: Stil - Kategorie-Icons (MMB)
+		 * ---------------------------------------------------------------
+		 */
+		$this->start_controls_section(
+			'section_style_icons',
+			array(
+				'label' => 'Kategorie-Icons',
+				'tab'   => \Elementor\Controls_Manager::TAB_STYLE,
+			)
+		);
+
+		$this->add_control(
+			'icon_display',
+			array(
+				'label'   => 'Icons anzeigen',
+				'type'    => \Elementor\Controls_Manager::SWITCHER,
+				'default' => 'yes',
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-mmb-category__icon' => 'display: {{VALUE}};',
+				),
+				'return_value' => 'flex',
+			)
+		);
+
+		$this->add_control(
+			'icon_size',
+			array(
+				'label'      => 'Groesse',
+				'type'       => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => array( 'px' ),
+				'range'      => array(
+					'px' => array( 'min' => 20, 'max' => 80 ),
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-mmb-category__icon' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'icon_font_size',
+			array(
+				'label'      => 'Icon-Schriftgroesse',
+				'type'       => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => array( 'px' ),
+				'range'      => array(
+					'px' => array( 'min' => 10, 'max' => 48 ),
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-mmb-category__icon' => 'font-size: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'icon_bg_color',
+			array(
+				'label'     => 'Hintergrund',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-mmb-category__icon' => 'background-color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'icon_color',
+			array(
+				'label'     => 'Farbe',
+				'type'      => \Elementor\Controls_Manager::COLOR,
+				'selectors' => array(
+					'{{WRAPPER}} .dhps-mmb-category__icon' => 'color: {{VALUE}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'icon_border_radius',
+			array(
+				'label'      => 'Eckenradius',
+				'type'       => \Elementor\Controls_Manager::SLIDER,
+				'size_units' => array( 'px', '%' ),
+				'range'      => array(
+					'px' => array( 'min' => 0, 'max' => 50 ),
+					'%'  => array( 'min' => 0, 'max' => 50 ),
+				),
+				'selectors'  => array(
+					'{{WRAPPER}} .dhps-mmb-category__icon' => 'border-radius: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->end_controls_section();
+
+		/*
+		 * ---------------------------------------------------------------
 		 * Section 4: Stil - Cards
 		 * ---------------------------------------------------------------
 		 */

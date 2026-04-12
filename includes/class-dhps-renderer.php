@@ -320,6 +320,7 @@ class DHPS_Renderer {
 		 */
 		$fallbacks = apply_filters( 'dhps_template_fallbacks', array(
 			'lxmio' => 'mio',
+			'mil'   => 'mmb',
 		) );
 
 		return $fallbacks[ $tag ] ?? null;

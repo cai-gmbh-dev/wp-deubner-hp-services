@@ -302,14 +302,45 @@
 			// Kategorien filtern.
 			var categories = container.querySelectorAll( '[data-dhps-mmb-category]' );
 			categories.forEach( function ( cat ) {
-				if ( filter === 'all' || cat.getAttribute( 'data-category' ) === filter ) {
+				var isVisible = ( filter === 'all' || cat.getAttribute( 'data-category' ) === filter );
+
+				if ( isVisible ) {
 					cat.style.display = '';
 					cat.removeAttribute( 'hidden' );
+
+					// Bei Einzelfilter: Kategorie automatisch oeffnen.
+					if ( filter !== 'all' ) {
+						var trigger = cat.querySelector( '[data-dhps-mmb-category-toggle]' );
+						var content = trigger ? document.getElementById( trigger.getAttribute( 'aria-controls' ) ) : null;
+
+						if ( trigger ) {
+							trigger.setAttribute( 'aria-expanded', 'true' );
+						}
+						if ( content ) {
+							content.setAttribute( 'aria-hidden', 'false' );
+						}
+					}
 				} else {
 					cat.style.display = 'none';
 					cat.setAttribute( 'hidden', '' );
 				}
 			} );
+
+			// Bei "Alle": Erste Kategorie oeffnen, Rest schliessen.
+			if ( filter === 'all' ) {
+				categories.forEach( function ( cat, idx ) {
+					var trigger = cat.querySelector( '[data-dhps-mmb-category-toggle]' );
+					var content = trigger ? document.getElementById( trigger.getAttribute( 'aria-controls' ) ) : null;
+					var shouldOpen = ( idx === 0 );
+
+					if ( trigger ) {
+						trigger.setAttribute( 'aria-expanded', shouldOpen ? 'true' : 'false' );
+					}
+					if ( content ) {
+						content.setAttribute( 'aria-hidden', shouldOpen ? 'false' : 'true' );
+					}
+				} );
+			}
 		} );
 	}
 

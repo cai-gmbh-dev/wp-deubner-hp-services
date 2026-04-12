@@ -277,8 +277,9 @@ class DHPS_AJAX_Proxy {
 			wp_die( 'Ungueltige Anfrage.', 'Fehler', array( 'response' => 403 ) );
 		}
 
-		$merkblatt = isset( $_GET['merkblatt'] ) ? sanitize_text_field( wp_unslash( $_GET['merkblatt'] ) ) : '';
-		$header    = isset( $_GET['header'] ) ? sanitize_text_field( wp_unslash( $_GET['header'] ) ) : '';
+		$merkblatt   = isset( $_GET['merkblatt'] ) ? sanitize_text_field( wp_unslash( $_GET['merkblatt'] ) ) : '';
+		$header      = isset( $_GET['header'] ) ? sanitize_text_field( wp_unslash( $_GET['header'] ) ) : '';
+		$service_tag = isset( $_GET['service'] ) ? sanitize_key( wp_unslash( $_GET['service'] ) ) : 'mmb';
 		// Fallback: Legacy-Parameter 'id' akzeptieren.
 		if ( '' === $merkblatt && isset( $_GET['id'] ) ) {
 			$merkblatt = sanitize_text_field( wp_unslash( $_GET['id'] ) );
@@ -289,15 +290,28 @@ class DHPS_AJAX_Proxy {
 			wp_die( 'Fehlende Merkblatt-ID.', 'Fehler', array( 'response' => 400 ) );
 		}
 
+		// Erlaubte Services fuer PDF-Download (Whitelist).
+		$allowed_services = array( 'mmb', 'mil' );
+		if ( ! in_array( $service_tag, $allowed_services, true ) ) {
+			$service_tag = 'mmb';
+		}
+
 		// kdnr serverseitig laden.
-		$service = DHPS_Service_Registry::get_service( 'mmb' );
+		$service = DHPS_Service_Registry::get_service( $service_tag );
 		$ota     = get_option( $service['auth_option'], '' );
 
 		if ( '' === $ota ) {
 			wp_die( 'Service nicht konfiguriert.', 'Fehler', array( 'response' => 400 ) );
 		}
 
-		// PDF-URL serverseitig zusammenbauen (neuer Endpoint: controllers/download.php).
+		// Download-Endpoint pro Service (mmo fuer MMB, mil fuer MIL).
+		$endpoint_map = array(
+			'mmb' => 'einbau/mmo/controllers/download.php',
+			'mil' => 'einbau/mil/controllers/download.php',
+		);
+		$endpoint = $endpoint_map[ $service_tag ] ?? $endpoint_map['mmb'];
+
+		// PDF-URL serverseitig zusammenbauen.
 		$pdf_params = array(
 			'kdnr'      => $ota,
 			'merkblatt' => $merkblatt,
@@ -307,7 +321,7 @@ class DHPS_AJAX_Proxy {
 			$pdf_params['header'] = $header;
 		}
 
-		$pdf_url = DEUBNER_HP_SERVICES_API_BASE . 'einbau/mmo/controllers/download.php?'
+		$pdf_url = DEUBNER_HP_SERVICES_API_BASE . $endpoint . '?'
 			. http_build_query( $pdf_params );
 
 		// PDF-Datei vom Server laden und an Client streamen.
@@ -334,7 +348,8 @@ class DHPS_AJAX_Proxy {
 		}
 
 		header( 'Content-Type: application/pdf' );
-		header( 'Content-Disposition: inline; filename="merkblatt_' . sanitize_file_name( $merkblatt_id ) . '.pdf"' );
+		$file_prefix = ( 'mil' === $service_tag ) ? 'infografik_' : 'merkblatt_';
+		header( 'Content-Disposition: inline; filename="' . $file_prefix . sanitize_file_name( $merkblatt ) . '.pdf"' );
 		header( 'Content-Length: ' . strlen( $body ) );
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Binary PDF data.

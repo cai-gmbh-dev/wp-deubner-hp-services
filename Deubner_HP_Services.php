@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.9.9
+ * Version: 0.10.0
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -19,7 +19,7 @@
  * Developer Author: Kai R. Emde
  *
  * @package Deubner Homepage-Service
- * @version 0.9.9
+ * @version 0.10.0
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.9.9' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.10.0' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -234,8 +234,10 @@ function dhps_init() {
     DHPS_Parser_Registry::register( 'lxmio', $mio_parser );
 
     // MMB-Parser registrieren (Merkblaetter).
+    // MIL (Infografiken) verwendet denselben Parser (gleiche HTML-Struktur).
     $mmb_parser = new DHPS_MMB_Parser();
     DHPS_Parser_Registry::register( 'mmb', $mmb_parser );
+    DHPS_Parser_Registry::register( 'mil', $mmb_parser );
 
     // TP-Parser registrieren (TaxPlain Videos).
     $tp_parser = new DHPS_TP_Parser();

@@ -25,7 +25,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $categories    = $data['categories'] ?? array();
 $search_config = $data['search_config'] ?? array();
-$service_tag   = $data['service_tag'] ?? 'mmb';
+$service_tag    = $data['service_tag'] ?? 'mmb';
+$download_label = ( 'mil' === $service_tag ) ? 'Infografik herunterladen' : 'PDF herunterladen';
+$is_mil         = ( 'mil' === $service_tag );
 
 wp_enqueue_script( 'dhps-mmb-js' );
 ?>
@@ -111,7 +113,7 @@ wp_enqueue_script( 'dhps-mmb-js' );
 			<div class="dhps-mmb-category__content"
 				 id="dhps-mmb-<?php echo $cat_id; ?>"
 				 role="region"
-				 <?php echo $is_first ? '' : 'aria-hidden="true"'; ?>>
+				 aria-hidden="<?php echo $is_first ? 'false' : 'true'; ?>">
 
 				<?php if ( ! empty( $category['fact_sheets'] ) ) : ?>
 				<ul class="dhps-mmb-list">
@@ -138,11 +140,18 @@ wp_enqueue_script( 'dhps-mmb-js' );
 							<?php endif; ?>
 
 							<div class="dhps-mmb-item__actions">
+								<?php
+								if ( $is_mil && ! empty( $sheet['pdf_params']['merkblatt'] ) ) {
+									$pdf_href = 'https://www.deubner-online.de/einbau/mil/content/merkblaetter/' . $sheet['pdf_params']['merkblatt'] . '.pdf';
+								} else {
+									$pdf_href = admin_url( 'admin-ajax.php' ) . '?' . http_build_query( array_merge(
+										array( 'action' => 'dhps_mmb_pdf', 'nonce' => wp_create_nonce( 'dhps_mmb_nonce' ), 'service' => $service_tag ),
+										$sheet['pdf_params']
+									) );
+								}
+								?>
 								<a class="dhps-mmb-item__download"
-								   href="<?php echo esc_url( admin_url( 'admin-ajax.php' ) . '?' . http_build_query( array_merge(
-									   array( 'action' => 'dhps_mmb_pdf', 'nonce' => wp_create_nonce( 'dhps_mmb_nonce' ) ),
-									   $sheet['pdf_params']
-								   ) ) ); ?>"
+								   href="<?php echo esc_url( $pdf_href ); ?>"
 								   target="_blank"
 								   rel="noopener"
 								   data-dhps-mmb-pdf="<?php echo $sheet_id; ?>">
@@ -151,7 +160,7 @@ wp_enqueue_script( 'dhps-mmb-js' );
 										<polyline points="7 10 12 15 17 10"/>
 										<line x1="12" y1="15" x2="12" y2="3"/>
 									</svg>
-									<?php echo esc_html( 'PDF herunterladen' ); ?>
+									<?php echo esc_html( $download_label ); ?>
 								</a>
 
 								<button type="button"

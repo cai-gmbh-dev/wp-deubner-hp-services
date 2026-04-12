@@ -939,8 +939,8 @@
 	align-items: center;
 	justify-content: center;
 	font-size: 18px;
-	background: var(--dhps-color-steuern, #2e8a37);
-	border-radius: var(--dhps-radius, 8px);
+	background: var(--dhps-color-steuern, #0AA245);
+	border-radius: var(--dhps-radius, 0);
 	color: #fff;
 }
 
@@ -976,6 +976,10 @@
 
 .dhps-mmb-category__content[aria-hidden="true"] {
 	display: none;
+}
+
+.dhps-mmb-category__content[aria-hidden="false"] {
+	display: block;
 }
 
 /* ==========================================================================
@@ -1026,7 +1030,7 @@
 .dhps-mmb-item__detail {
 	display: none;
 	padding: 0 16px 16px;
-	border-left: 3px solid var(--dhps-color-steuern, #2e8a37);
+	border-left: 3px solid var(--dhps-color-steuern, #0AA245);
 	margin: 0 16px 8px;
 }
 
@@ -1142,11 +1146,22 @@
    ========================================================================== */
 
 .dhps-mmb-item--compact {
+	padding: 8px 12px;
+}
+
+.dhps-mmb-item__row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 8px;
-	padding: 8px 12px;
+}
+
+.dhps-mmb-item__desc--compact {
+	margin: 2px 0 0 0;
+	padding-left: 4px;
+	font-size: 0.75rem;
+	color: var(--dhps-color-meta, #999);
+	line-height: 1.4;
 }
 
 .dhps-mmb-item__title--compact {

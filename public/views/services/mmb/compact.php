@@ -2,29 +2,31 @@
 /**
  * Service-Template: MMB Kompakt-Layout.
  *
- * Einzeilige Merkblatt-Eintraege mit direktem PDF-Button.
+ * Einzeilige Merkblatt-Eintraege mit Beschreibung und PDF-Button.
  * Ideal fuer Seitenleisten und schmale Einbettungen.
- *
- * Kann vom Theme ueberschrieben werden unter:
- * {theme}/dhps/services/mmb/compact.php
  *
  * @package    Deubner Homepage-Service
  * @subpackage Public/Views/Services/MMB
  * @since      0.9.1
+ * @since      0.9.9 Beschreibungstext, aria-hidden Fix, MIL-Support.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$categories    = $data['categories'] ?? array();
-$search_config = $data['search_config'] ?? array();
-$service_tag   = $data['service_tag'] ?? 'mmb';
+$categories     = $data['categories'] ?? array();
+$search_config  = $data['search_config'] ?? array();
+$service_tag    = $data['service_tag'] ?? 'mmb';
+$download_label = ( 'mil' === $service_tag ) ? 'Infografik herunterladen' : 'PDF herunterladen';
+$is_mil         = ( 'mil' === $service_tag );
+
+wp_enqueue_script( 'dhps-mmb-js' );
 ?>
 <div class="dhps-service <?php echo esc_attr( $service_class . ' ' . $layout_class . $custom_class ); ?>">
 
 	<?php if ( ! empty( $search_config['has_search'] ) ) : ?>
-	<section class="dhps-mmb-search dhps-mmb-search--compact" aria-label="<?php echo esc_attr( 'Merkblatt-Suche' ); ?>">
+	<section class="dhps-mmb-search dhps-mmb-search--compact" aria-label="<?php echo esc_attr( 'Suche' ); ?>">
 		<form class="dhps-mmb-search__form" role="search" data-dhps-mmb-search>
 			<div class="dhps-mmb-search__field dhps-mmb-search__field--grow">
 				<input type="search"
@@ -41,6 +43,13 @@ $service_tag   = $data['service_tag'] ?? 'mmb';
 		</form>
 	</section>
 	<?php endif; ?>
+
+	<!-- Such-Ergebnisse -->
+	<div class="dhps-mmb-results" data-dhps-mmb-results hidden>
+		<div class="dhps-mmb-results__loading" data-dhps-mmb-loading>
+			<span class="dhps-news__spinner" aria-hidden="true"></span>
+		</div>
+	</div>
 
 	<?php if ( count( $categories ) > 1 ) : ?>
 	<!-- Kategorie-Filter -->
@@ -71,7 +80,10 @@ $service_tag   = $data['service_tag'] ?? 'mmb';
 			$cat_count = count( $category['fact_sheets'] );
 			$is_first  = ( 0 === $index );
 		?>
-		<div class="dhps-mmb-category dhps-mmb-category--compact" data-dhps-mmb-category data-category="<?php echo esc_attr( $category['id'] ); ?>">
+		<div class="dhps-mmb-category dhps-mmb-category--compact"
+			 data-dhps-mmb-category
+			 data-category="<?php echo esc_attr( $category['id'] ); ?>">
+
 			<h3 class="dhps-mmb-category__header">
 				<button type="button"
 						class="dhps-mmb-category__trigger"
@@ -90,28 +102,42 @@ $service_tag   = $data['service_tag'] ?? 'mmb';
 
 			<div class="dhps-mmb-category__content"
 				 id="dhps-mmb-compact-<?php echo $cat_id; ?>"
-				 <?php echo $is_first ? '' : 'aria-hidden="true"'; ?>>
+				 aria-hidden="<?php echo $is_first ? 'false' : 'true'; ?>">
 
 				<?php if ( ! empty( $category['fact_sheets'] ) ) : ?>
 				<ul class="dhps-mmb-list dhps-mmb-list--compact">
 					<?php foreach ( $category['fact_sheets'] as $sheet ) : ?>
 					<li class="dhps-mmb-item dhps-mmb-item--compact">
-						<span class="dhps-mmb-item__title dhps-mmb-item__title--compact">
-							<?php echo esc_html( $sheet['title'] ); ?>
-						</span>
-						<a class="dhps-mmb-item__pdf-btn"
-						   href="<?php echo esc_url( admin_url( 'admin-ajax.php' ) . '?' . http_build_query( array_merge(
-							   array( 'action' => 'dhps_mmb_pdf', 'nonce' => wp_create_nonce( 'dhps_mmb_nonce' ) ),
-							   $sheet['pdf_params']
-						   ) ) ); ?>"
-						   target="_blank" rel="noopener"
-						   title="<?php echo esc_attr( 'PDF herunterladen' ); ?>">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-								<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-								<polyline points="7 10 12 15 17 10"/>
-								<line x1="12" y1="15" x2="12" y2="3"/>
-							</svg>
-						</a>
+						<div class="dhps-mmb-item__row">
+							<span class="dhps-mmb-item__title dhps-mmb-item__title--compact">
+								<?php echo esc_html( $sheet['title'] ); ?>
+							</span>
+							<?php
+							if ( $is_mil && ! empty( $sheet['pdf_params']['merkblatt'] ) ) {
+								$pdf_href = 'https://www.deubner-online.de/einbau/mil/content/merkblaetter/' . $sheet['pdf_params']['merkblatt'] . '.pdf';
+							} else {
+								$pdf_href = admin_url( 'admin-ajax.php' ) . '?' . http_build_query( array_merge(
+									array( 'action' => 'dhps_mmb_pdf', 'nonce' => wp_create_nonce( 'dhps_mmb_nonce' ), 'service' => $service_tag ),
+									$sheet['pdf_params']
+								) );
+							}
+							?>
+							<a class="dhps-mmb-item__pdf-btn"
+							   href="<?php echo esc_url( $pdf_href ); ?>"
+							   target="_blank" rel="noopener"
+							   title="<?php echo esc_attr( $download_label ); ?>">
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+									<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+									<polyline points="7 10 12 15 17 10"/>
+									<line x1="12" y1="15" x2="12" y2="3"/>
+								</svg>
+							</a>
+						</div>
+						<?php if ( ! empty( $sheet['description'] ) ) : ?>
+						<p class="dhps-mmb-item__desc--compact">
+							<?php echo esc_html( $sheet['description'] ); ?>
+						</p>
+						<?php endif; ?>
 					</li>
 					<?php endforeach; ?>
 				</ul>

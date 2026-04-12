@@ -22,6 +22,8 @@ $show_description = $show_description ?? true;
 $accordion_open   = $accordion_open ?? false;
 $columns          = isset( $columns ) ? absint( $columns ) : 2;
 $download_label   = 'Herunterladen';
+
+wp_enqueue_script( 'dhps-mmb-js' );
 if ( $columns < 1 || $columns > 4 ) { $columns = 2; }
 ?>
 <div class="dhps-card">

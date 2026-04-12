@@ -1355,8 +1355,17 @@
 }
 
 /* MAES Aktuelles: News-Akkordeon mit Medizin-Farbe */
-.dhps-service--maes-aktuelles .dhps-news__title {
+.dhps-service--maes-aktuelles .dhps-news__title,
+.dhps-service--maes-aktuelles-card .dhps-news__title,
+.dhps-service--maes-aktuelles-compact .dhps-news__title {
     color: var(--dhps-color-medizin, #0097a7);
+}
+
+.dhps-service--maes-aktuelles .dhps-news__title:hover,
+.dhps-service--maes-aktuelles-card .dhps-news__title:hover,
+.dhps-service--maes-aktuelles-compact .dhps-news__title:hover {
+    color: var(--dhps-color-medizin, #0097a7);
+    opacity: 0.8;
 }
 
 .dhps-service--maes-aktuelles .dhps-news__body {

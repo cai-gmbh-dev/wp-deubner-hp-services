@@ -617,6 +617,63 @@ class DHPS_Elementor_Widget_MAES_Aktuelles extends DHPS_Elementor_MAES_Base {
 		) );
 
 		$this->end_controls_section();
+
+		// --- Stil: Artikel-Rahmen ---
+		$this->start_controls_section( 'section_style_article', array(
+			'label' => 'Artikel-Rahmen', 'tab' => \Elementor\Controls_Manager::TAB_STYLE,
+		) );
+
+		$this->add_control( 'article_border_color', array(
+			'label' => 'Trennlinie-Farbe', 'type' => \Elementor\Controls_Manager::COLOR,
+			'selectors' => array( '{{WRAPPER}} .dhps-news__article' => 'border-bottom-color: {{VALUE}};' ),
+		) );
+
+		$this->add_control( 'article_border_width', array(
+			'label' => 'Trennlinie-Breite', 'type' => \Elementor\Controls_Manager::SLIDER,
+			'size_units' => array( 'px' ),
+			'range' => array( 'px' => array( 'min' => 0, 'max' => 5 ) ),
+			'selectors' => array( '{{WRAPPER}} .dhps-news__article' => 'border-bottom-width: {{SIZE}}{{UNIT}};' ),
+		) );
+
+		$this->add_control( 'article_border_style', array(
+			'label' => 'Trennlinie-Typ', 'type' => \Elementor\Controls_Manager::SELECT,
+			'options' => array( '' => 'Standard', 'solid' => 'Durchgezogen', 'dashed' => 'Gestrichelt', 'dotted' => 'Gepunktet', 'none' => 'Keine' ),
+			'selectors' => array( '{{WRAPPER}} .dhps-news__article' => 'border-bottom-style: {{VALUE}};' ),
+		) );
+
+		$this->end_controls_section();
+
+		// --- Stil: Ausblenden-Button ---
+		$this->start_controls_section( 'section_style_collapse_btn', array(
+			'label' => 'Ausblenden-Button', 'tab' => \Elementor\Controls_Manager::TAB_STYLE,
+		) );
+
+		$this->add_group_control( \Elementor\Group_Control_Typography::get_type(), array(
+			'name' => 'collapse_btn_typo', 'selector' => '{{WRAPPER}} .dhps-news__action-link',
+		) );
+
+		$this->add_control( 'collapse_btn_color', array(
+			'label' => 'Farbe', 'type' => \Elementor\Controls_Manager::COLOR,
+			'selectors' => array( '{{WRAPPER}} .dhps-news__action-link' => 'color: {{VALUE}};' ),
+		) );
+
+		$this->add_control( 'collapse_btn_color_hover', array(
+			'label' => 'Hover-Farbe', 'type' => \Elementor\Controls_Manager::COLOR,
+			'selectors' => array( '{{WRAPPER}} .dhps-news__action-link:hover' => 'color: {{VALUE}};' ),
+		) );
+
+		$this->add_control( 'collapse_btn_bg', array(
+			'label' => 'Hintergrund', 'type' => \Elementor\Controls_Manager::COLOR,
+			'selectors' => array( '{{WRAPPER}} .dhps-news__action-link' => 'background-color: {{VALUE}};' ),
+		) );
+
+		$this->add_control( 'collapse_btn_padding', array(
+			'label' => 'Innenabstand', 'type' => \Elementor\Controls_Manager::DIMENSIONS,
+			'size_units' => array( 'px', 'em' ),
+			'selectors' => array( '{{WRAPPER}} .dhps-news__action-link' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};' ),
+		) );
+
+		$this->end_controls_section();
 	}
 
 	protected function render(): void {

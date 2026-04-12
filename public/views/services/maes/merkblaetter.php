@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $download_label = 'Merkblatt herunterladen';
+
+wp_enqueue_script( 'dhps-mmb-js' );
 ?>
 <div class="dhps-service dhps-service--mmb dhps-service--maes-merkblaetter<?php echo esc_attr( $custom_class ); ?>">
 

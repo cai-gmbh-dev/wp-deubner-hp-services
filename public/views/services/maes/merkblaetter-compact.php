@@ -18,6 +18,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $show_description = $show_description ?? false;
+
+wp_enqueue_script( 'dhps-mmb-js' );
 ?>
 <div class="dhps-service dhps-service--mmb dhps-service--maes-merkblaetter dhps-mmb-compact<?php echo esc_attr( $custom_class ); ?>">
 

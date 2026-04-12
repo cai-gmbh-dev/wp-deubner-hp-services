@@ -6,6 +6,10 @@
  *   $videos       - Array der Video-Daten aus DHPS_MAES_Parser.
  *   $columns      - Grid-Spalten (1-4).
  *   $custom_class - Optionale CSS-Klasse.
+ *   $video_mode   - 'inline' oder 'modal'.
+ *   $style_preset - 'default', 'minimal', 'shadow'.
+ *   $lazy_count   - Initiale Videos (0 = alle).
+ *   $lazy_mode    - 'manual' oder 'auto'.
  *
  * @package Deubner Homepage-Service
  * @since   0.10.1
@@ -14,15 +18,30 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+$lazy_count   = $lazy_count ?? 0;
+$lazy_mode    = $lazy_mode ?? 'manual';
+$style_preset = $style_preset ?? 'default';
+$video_mode   = $video_mode ?? 'inline';
+
+wp_enqueue_script( 'dhps-tp-js' );
+
+$video_index = 0;
 ?>
-<div class="dhps-service dhps-service--tp dhps-service--maes-videos<?php echo esc_attr( $custom_class ); ?>"
+<div class="dhps-service dhps-service--tp dhps-service--maes-videos dhps-tp-style--<?php echo esc_attr( $style_preset ); ?><?php echo esc_attr( $custom_class ); ?>"
 	 data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
 	 data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_tp_nonce' ) ); ?>"
-	 data-video-mode="<?php echo esc_attr( $video_mode ?? 'inline' ); ?>">
+	 data-video-mode="<?php echo esc_attr( $video_mode ); ?>"
+	 data-lazy-count="<?php echo esc_attr( $lazy_count ); ?>"
+	 data-lazy-mode="<?php echo esc_attr( $lazy_mode ); ?>">
 
 	<div class="dhps-tp-grid dhps-tp-grid--<?php echo esc_attr( $columns ); ?>col">
-		<?php foreach ( $videos as $video ) : ?>
-		<article class="dhps-tp-card">
+		<?php foreach ( $videos as $video ) :
+			$is_hidden = ( $lazy_count > 0 && $video_index >= $lazy_count );
+		?>
+		<article class="dhps-tp-card<?php echo $is_hidden ? ' dhps-tp-card--lazy-hidden' : ''; ?>"
+				 <?php echo $is_hidden ? 'hidden' : ''; ?>
+				 data-video-index="<?php echo esc_attr( $video_index ); ?>">
 			<div class="dhps-tp-card__poster" role="button" tabindex="0"
 				 aria-label="<?php echo esc_attr( 'Video: ' . $video['title'] ); ?>"
 				 data-video-slug="<?php echo esc_attr( $video['video_slug'] ); ?>"
@@ -47,7 +66,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<?php endif; ?>
 			</div>
 		</article>
-		<?php endforeach; ?>
+		<?php $video_index++; endforeach; ?>
 	</div>
+
+	<?php if ( $lazy_count > 0 && $video_index > $lazy_count ) : ?>
+	<button class="dhps-tp-load-more" type="button">
+		<?php echo esc_html( 'Weitere Videos laden' ); ?>
+	</button>
+	<?php endif; ?>
 
 </div>

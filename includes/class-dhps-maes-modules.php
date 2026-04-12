@@ -96,10 +96,12 @@ class DHPS_MAES_Modules {
 	 */
 	public function render_videos( $atts ): string {
 		$atts = shortcode_atts( array(
-			'layout'  => 'default',
-			'columns' => '2',
-			'class'   => '',
-			'cache'   => '3600',
+			'layout'     => 'default',
+			'columns'    => '2',
+			'lazy_count' => '0',
+			'lazy_mode'  => 'manual',
+			'class'      => '',
+			'cache'      => '3600',
 		), $atts, 'maes_videos' );
 
 		$data = $this->get_data( absint( $atts['cache'] ) );
@@ -113,6 +115,8 @@ class DHPS_MAES_Modules {
 		$custom_class  = ! empty( $atts['class'] ) ? ' ' . sanitize_html_class( $atts['class'] ) : '';
 		$video_mode    = 'inline';
 		$style_preset  = 'default';
+		$lazy_count    = absint( $atts['lazy_count'] );
+		$lazy_mode     = sanitize_key( $atts['lazy_mode'] );
 
 		if ( $columns < 1 || $columns > 4 ) {
 			$columns = 2;

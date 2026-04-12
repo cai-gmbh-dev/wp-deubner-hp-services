@@ -92,35 +92,11 @@ class DHPS_Elementor_Widget_MAES_Videos extends DHPS_Elementor_MAES_Base {
 			'tab'   => \Elementor\Controls_Manager::TAB_CONTENT,
 		) );
 
-		$this->add_control( 'teasermodus', array(
-			'label'   => 'Teaser-Modus',
-			'type'    => \Elementor\Controls_Manager::SELECT,
-			'options' => array( '' => '(Standard)', '0' => 'Aus', '1' => 'An' ),
-			'default' => '',
-		) );
-
-		$this->add_control( 'einzelvideo', array(
-			'label' => 'Einzelvideo-ID', 'type' => \Elementor\Controls_Manager::NUMBER,
-			'default' => 0, 'min' => 0,
-		) );
-
-		$this->add_control( 'videoliste', array(
-			'label' => 'Videoliste', 'type' => \Elementor\Controls_Manager::TEXT, 'default' => '',
-		) );
-
 		$this->add_control( 'layout', array(
 			'label'   => 'Layout',
 			'type'    => \Elementor\Controls_Manager::SELECT,
 			'options' => array( 'default' => 'Standard', 'card' => 'Card', 'compact' => 'Kompakt' ),
 			'default' => 'default',
-		) );
-
-		$this->end_controls_section();
-
-		// --- Video-Layout ---
-		$this->start_controls_section( 'section_video_layout', array(
-			'label' => 'Video-Layout',
-			'tab'   => \Elementor\Controls_Manager::TAB_CONTENT,
 		) );
 
 		$this->add_control( 'columns', array(
@@ -135,6 +111,14 @@ class DHPS_Elementor_Widget_MAES_Videos extends DHPS_Elementor_MAES_Base {
 			'description' => '0 = alle anzeigen',
 			'type'        => \Elementor\Controls_Manager::NUMBER,
 			'default'     => 0, 'min' => 0, 'max' => 50,
+		) );
+
+		$this->add_control( 'lazy_mode', array(
+			'label'     => 'Nachladen',
+			'type'      => \Elementor\Controls_Manager::SELECT,
+			'options'   => array( 'manual' => 'Manuell (Button)', 'auto' => 'Automatisch (Scroll)' ),
+			'default'   => 'manual',
+			'condition' => array( 'lazy_count!' => 0 ),
 		) );
 
 		$this->add_control( 'video_mode', array(
@@ -250,6 +234,8 @@ class DHPS_Elementor_Widget_MAES_Videos extends DHPS_Elementor_MAES_Base {
 		$video_mode    = $settings['video_mode'] ?? 'inline';
 		$layout        = sanitize_key( $settings['layout'] ?? 'default' );
 		$style_preset  = sanitize_key( $settings['style_preset'] ?? 'default' );
+		$lazy_count    = absint( $settings['lazy_count'] ?? 0 );
+		$lazy_mode     = sanitize_key( $settings['lazy_mode'] ?? 'manual' );
 
 		if ( $columns < 1 || $columns > 4 ) { $columns = 2; }
 

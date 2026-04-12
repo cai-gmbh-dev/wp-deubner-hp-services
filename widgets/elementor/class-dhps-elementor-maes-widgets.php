@@ -99,6 +99,20 @@ class DHPS_Elementor_Widget_MAES_Videos extends DHPS_Elementor_MAES_Base {
 			'default' => 'default',
 		) );
 
+		$this->add_control( 'einzelvideo', array(
+			'label'       => 'Einzelvideo (Position)',
+			'description' => '0 = alle Videos. 1 = erstes, 2 = zweites, etc.',
+			'type'        => \Elementor\Controls_Manager::NUMBER,
+			'default'     => 0, 'min' => 0, 'max' => 20,
+		) );
+
+		$this->add_control( 'videoliste', array(
+			'label'       => 'Videoliste',
+			'description' => 'Positionen kommasepariert, z.B. "1,3,5" (leer = alle)',
+			'type'        => \Elementor\Controls_Manager::TEXT,
+			'default'     => '',
+		) );
+
 		$this->add_control( 'columns', array(
 			'label'   => 'Spalten',
 			'type'    => \Elementor\Controls_Manager::SELECT,
@@ -236,6 +250,24 @@ class DHPS_Elementor_Widget_MAES_Videos extends DHPS_Elementor_MAES_Base {
 		$style_preset  = sanitize_key( $settings['style_preset'] ?? 'default' );
 		$lazy_count    = absint( $settings['lazy_count'] ?? 0 );
 		$lazy_mode     = sanitize_key( $settings['lazy_mode'] ?? 'manual' );
+		$einzelvideo   = absint( $settings['einzelvideo'] ?? 0 );
+		$videoliste    = trim( $settings['videoliste'] ?? '' );
+
+		// Video-Filter: Einzelvideo oder Videoliste.
+		if ( $einzelvideo > 0 && isset( $videos[ $einzelvideo - 1 ] ) ) {
+			$videos = array( $videos[ $einzelvideo - 1 ] );
+		} elseif ( ! empty( $videoliste ) ) {
+			$indices    = array_map( 'absint', explode( ',', $videoliste ) );
+			$filtered   = array();
+			foreach ( $indices as $idx ) {
+				if ( $idx > 0 && isset( $videos[ $idx - 1 ] ) ) {
+					$filtered[] = $videos[ $idx - 1 ];
+				}
+			}
+			if ( ! empty( $filtered ) ) {
+				$videos = $filtered;
+			}
+		}
 
 		if ( $columns < 1 || $columns > 4 ) { $columns = 2; }
 

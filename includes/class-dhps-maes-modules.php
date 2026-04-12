@@ -96,12 +96,14 @@ class DHPS_MAES_Modules {
 	 */
 	public function render_videos( $atts ): string {
 		$atts = shortcode_atts( array(
-			'layout'     => 'default',
-			'columns'    => '2',
-			'lazy_count' => '0',
-			'lazy_mode'  => 'manual',
-			'class'      => '',
-			'cache'      => '3600',
+			'layout'      => 'default',
+			'columns'     => '2',
+			'einzelvideo' => '0',
+			'videoliste'  => '',
+			'lazy_count'  => '0',
+			'lazy_mode'   => 'manual',
+			'class'       => '',
+			'cache'       => '3600',
 		), $atts, 'maes_videos' );
 
 		$data = $this->get_data( absint( $atts['cache'] ) );
@@ -110,6 +112,26 @@ class DHPS_MAES_Modules {
 		}
 
 		$videos        = $data['videos'];
+
+		// Video-Filter: Einzelvideo oder Videoliste.
+		$einzelvideo = absint( $atts['einzelvideo'] );
+		$videoliste  = trim( $atts['videoliste'] );
+
+		if ( $einzelvideo > 0 && isset( $videos[ $einzelvideo - 1 ] ) ) {
+			$videos = array( $videos[ $einzelvideo - 1 ] );
+		} elseif ( ! empty( $videoliste ) ) {
+			$indices  = array_map( 'absint', explode( ',', $videoliste ) );
+			$filtered = array();
+			foreach ( $indices as $idx ) {
+				if ( $idx > 0 && isset( $videos[ $idx - 1 ] ) ) {
+					$filtered[] = $videos[ $idx - 1 ];
+				}
+			}
+			if ( ! empty( $filtered ) ) {
+				$videos = $filtered;
+			}
+		}
+
 		$columns       = absint( $atts['columns'] );
 		$layout        = sanitize_key( $atts['layout'] );
 		$custom_class  = ! empty( $atts['class'] ) ? ' ' . sanitize_html_class( $atts['class'] ) : '';

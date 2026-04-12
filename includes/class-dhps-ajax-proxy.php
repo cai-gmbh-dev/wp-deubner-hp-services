@@ -291,7 +291,7 @@ class DHPS_AJAX_Proxy {
 		}
 
 		// Erlaubte Services fuer PDF-Download (Whitelist).
-		$allowed_services = array( 'mmb', 'mil' );
+		$allowed_services = array( 'mmb', 'mil', 'maes' );
 		if ( ! in_array( $service_tag, $allowed_services, true ) ) {
 			$service_tag = 'mmb';
 		}
@@ -306,8 +306,9 @@ class DHPS_AJAX_Proxy {
 
 		// Download-Endpoint pro Service (mmo fuer MMB, mil fuer MIL).
 		$endpoint_map = array(
-			'mmb' => 'einbau/mmo/controllers/download.php',
-			'mil' => 'einbau/mil/controllers/download.php',
+			'mmb'  => 'einbau/mmo/controllers/download.php',
+			'mil'  => 'einbau/mil/controllers/download.php',
+			'maes' => 'einbau/infokombi/controllers/download.php',
 		);
 		$endpoint = $endpoint_map[ $service_tag ] ?? $endpoint_map['mmb'];
 

@@ -433,9 +433,10 @@ class DHPS_Service_Registry {
                 'auth_type'      => 'kdnr',
                 'auth_option'    => 'dhps_maes_kdnr',
                 'shortcode_atts' => array(
-                    'layout' => 'default',
-                    'class'  => '',
-                    'cache'  => '3600',
+                    'section' => '',
+                    'layout'  => 'default',
+                    'class'   => '',
+                    'cache'   => '3600',
                 ),
                 'admin_options'  => array(),
                 'supports_video' => true,

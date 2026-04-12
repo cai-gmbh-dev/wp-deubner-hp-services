@@ -124,6 +124,7 @@ class DHPS_Elementor {
 		require_once DEUBNER_HP_SERVICES_PATH . 'widgets/elementor/class-dhps-elementor-widget-base.php';
 		require_once DEUBNER_HP_SERVICES_PATH . 'widgets/elementor/class-dhps-elementor-service-widgets.php';
 		require_once DEUBNER_HP_SERVICES_PATH . 'widgets/elementor/class-dhps-elementor-widget-steuertermine.php';
+		require_once DEUBNER_HP_SERVICES_PATH . 'widgets/elementor/class-dhps-elementor-maes-widgets.php';
 
 		DHPS_Elementor_Widget_Base::set_dependencies( $this->pipeline );
 
@@ -148,6 +149,12 @@ class DHPS_Elementor {
 		if ( null !== $this->client && null !== $this->cache ) {
 			DHPS_Elementor_Widget_Steuertermine::set_dependencies( $this->client, $this->cache );
 			$widgets_manager->register( new DHPS_Elementor_Widget_Steuertermine() );
+
+			// MAES modulare Widgets (Videos, Merkblaetter, Aktuelles).
+			DHPS_Elementor_MAES_Base::set_dependencies( $this->client, $this->cache );
+			$widgets_manager->register( new DHPS_Elementor_Widget_MAES_Videos() );
+			$widgets_manager->register( new DHPS_Elementor_Widget_MAES_Merkblaetter() );
+			$widgets_manager->register( new DHPS_Elementor_Widget_MAES_Aktuelles() );
 		}
 	}
 }

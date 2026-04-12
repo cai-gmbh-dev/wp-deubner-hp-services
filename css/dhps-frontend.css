@@ -1337,6 +1337,206 @@
 
 
 /* ==========================================================================
+   MAES: Meine Aerzteseite
+   ========================================================================== */
+
+.dhps-maes-section__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--dhps-color-medizin, #0097a7);
+    margin: 0 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--dhps-color-medizin, #0097a7);
+}
+
+.dhps-service--maes .dhps-tp-card__poster:focus-visible,
+.dhps-service--maes-videos .dhps-tp-card__poster:focus-visible {
+    outline-color: var(--dhps-color-medizin, #0097a7);
+}
+
+/* MAES Aktuelles: News-Akkordeon mit Medizin-Farbe */
+.dhps-service--maes-aktuelles .dhps-news__title {
+    color: var(--dhps-color-medizin, #0097a7);
+}
+
+.dhps-service--maes-aktuelles .dhps-news__body {
+    border-left-color: var(--dhps-color-medizin, #0097a7);
+}
+
+.dhps-news__teaser-hint {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--dhps-color-meta, #999);
+    margin-top: 2px;
+}
+
+/* MAES Aktuelles: Card-Grid */
+.dhps-news__card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--dhps-grid-gap, 20px);
+}
+
+.dhps-news__card-grid--1col { grid-template-columns: 1fr; }
+.dhps-news__card-grid--2col { grid-template-columns: repeat(2, 1fr); }
+.dhps-news__card-grid--3col { grid-template-columns: repeat(3, 1fr); }
+.dhps-news__card-grid--4col { grid-template-columns: repeat(4, 1fr); }
+
+.dhps-news__card {
+    background: var(--dhps-color-bg-white, #fff);
+    border: 1px solid var(--dhps-color-border, #ddd);
+    padding: 16px;
+    transition: box-shadow 0.2s;
+}
+
+.dhps-news__card:hover {
+    box-shadow: var(--dhps-shadow, 0 0 5px 0 rgba(0,0,0,0.18));
+}
+
+.dhps-news__card .dhps-news__title {
+    font-size: 0.9375rem;
+    padding: 0;
+    text-align: left;
+}
+
+.dhps-news__card-teaser {
+    font-size: 0.8125rem;
+    color: var(--dhps-color-meta, #999);
+    margin: 6px 0 0;
+    line-height: 1.5;
+}
+
+.dhps-news__card .dhps-news__body {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--dhps-color-border, #ddd);
+    border-left: none;
+    padding-left: 0;
+}
+
+/* Card mit offenem Body: ueber alle Spalten */
+.dhps-news__card:has(.dhps-news__body[aria-hidden="false"]) {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+    .dhps-news__card-grid,
+    .dhps-news__card-grid--2col,
+    .dhps-news__card-grid--3col,
+    .dhps-news__card-grid--4col {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* MAES Merkblaetter: Card-Grid */
+.dhps-mmb-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--dhps-grid-gap, 20px);
+}
+
+.dhps-mmb-card-grid--1col { grid-template-columns: 1fr; }
+.dhps-mmb-card-grid--2col { grid-template-columns: repeat(2, 1fr); }
+.dhps-mmb-card-grid--3col { grid-template-columns: repeat(3, 1fr); }
+.dhps-mmb-card-grid--4col { grid-template-columns: repeat(4, 1fr); }
+
+.dhps-mmb-card-grid__item {
+    background: var(--dhps-color-bg-white, #fff);
+    border: 1px solid var(--dhps-color-border, #ddd);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.2s;
+}
+
+.dhps-mmb-card-grid__item:hover {
+    box-shadow: var(--dhps-shadow, 0 0 5px 0 rgba(0,0,0,0.18));
+}
+
+.dhps-mmb-card-grid__title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--dhps-color-text, #333);
+    margin: 0 0 8px;
+}
+
+.dhps-mmb-card-grid__desc {
+    font-size: 0.8125rem;
+    color: var(--dhps-color-meta, #999);
+    line-height: 1.5;
+    margin: 0 0 12px;
+    flex: 1;
+}
+
+.dhps-mmb-card-grid__actions {
+    margin-top: auto;
+}
+
+@media (max-width: 768px) {
+    .dhps-mmb-card-grid,
+    .dhps-mmb-card-grid--2col,
+    .dhps-mmb-card-grid--3col,
+    .dhps-mmb-card-grid--4col {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* MAES Merkblaetter: Medizin-Farbe fuer Akkordeon */
+.dhps-service--maes-merkblaetter .dhps-mmb-category__trigger {
+    color: var(--dhps-color-medizin, #0097a7);
+}
+
+.dhps-service--maes-merkblaetter .dhps-mmb-item__detail {
+    border-left-color: var(--dhps-color-medizin, #0097a7);
+}
+
+.dhps-service--maes .dhps-mmb-item__detail {
+    border-left-color: var(--dhps-color-medizin, #0097a7);
+}
+
+.dhps-service--maes .dhps-filter-bar__btn--active,
+.dhps-service--maes .dhps-filter-bar__btn[aria-pressed="true"] {
+    background: var(--dhps-color-medizin, #0097a7);
+    border-color: var(--dhps-color-medizin, #0097a7);
+}
+
+.dhps-divider {
+    border: none;
+    border-top: 1px solid var(--dhps-color-border, #ddd);
+    margin: 24px 0;
+}
+
+.dhps-mmb-list--compact {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.dhps-mmb-item--compact {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--dhps-color-border, #eee);
+}
+
+.dhps-mmb-item--compact:last-child {
+    border-bottom: none;
+}
+
+.dhps-mmb-item__download--inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--dhps-color-medizin, #0097a7);
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+
+.dhps-mmb-item__download--inline:hover {
+    text-decoration: underline;
+}
+
+
+/* ==========================================================================
    TP: Featured Video
    ========================================================================== */
 

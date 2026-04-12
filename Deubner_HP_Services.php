@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.10.0
+ * Version: 0.10.1
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -19,7 +19,7 @@
  * Developer Author: Kai R. Emde
  *
  * @package Deubner Homepage-Service
- * @version 0.10.0
+ * @version 0.10.1
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.10.0' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.10.1' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -243,6 +243,10 @@ function dhps_init() {
     $tp_parser = new DHPS_TP_Parser();
     DHPS_Parser_Registry::register( 'tp', $tp_parser );
 
+    // MAES-Parser registrieren (Meine Aerzteseite).
+    $maes_parser = new DHPS_MAES_Parser();
+    DHPS_Parser_Registry::register( 'maes', $maes_parser );
+
     // 4. AJAX-Proxy registrieren (serverseitige News-Anfragen).
     $ajax_proxy = new DHPS_AJAX_Proxy( $api, $cache );
     $ajax_proxy->register();
@@ -256,8 +260,9 @@ function dhps_init() {
     $shortcodes = new DHPS_Shortcodes( $client, $renderer, $pipeline );
     $shortcodes->register();
 
-    // 7. Steuertermine Standalone-Shortcode.
+    // 7. Standalone-Shortcodes.
     new DHPS_Steuertermine( $client, $cache );
+    new DHPS_MAES_Modules( $client, $cache );
 
     // 8. WordPress-Widget registrieren.
     add_action( 'widgets_init', function () use ( $client, $renderer ) {

@@ -125,12 +125,20 @@ class DHPS_Shortcodes {
         // Shortcode-Attribute mit Defaults mergen.
         $attributes = shortcode_atts( $service['shortcode_atts'], $atts, $tag );
 
+        // MAES section filter: vor dem Rendering setzen.
+        if ( 'maes' === $tag && ! empty( $attributes['section'] ) ) {
+            $section_value = sanitize_key( $attributes['section'] );
+            add_filter( 'dhps_maes_section', function () use ( $section_value ) {
+                return $section_value;
+            } );
+        }
+
         // Universelle Parameter extrahieren und aus den API-Attributen entfernen.
         $layout    = isset( $attributes['layout'] ) ? $attributes['layout'] : 'default';
         $css_class = isset( $attributes['class'] ) ? $attributes['class'] : '';
         $cache_ttl = isset( $attributes['cache'] ) ? absint( $attributes['cache'] ) : 3600;
 
-        unset( $attributes['layout'], $attributes['class'], $attributes['cache'] );
+        unset( $attributes['layout'], $attributes['class'], $attributes['cache'], $attributes['section'] );
 
         // Parameter-Array aufbauen.
         $params = array();
@@ -160,7 +168,14 @@ class DHPS_Shortcodes {
         // Inhalt ueber die Content-Pipeline abrufen, parsen und rendern.
         // Die Pipeline prueft ob ein Parser registriert ist und faellt
         // bei nicht-migrierten Services auf den Raw-HTML-Renderer zurueck.
-        return $this->pipeline->render_service( $tag, $service['endpoint'], $params, $cache_ttl, $layout, $css_class );
+        $output = $this->pipeline->render_service( $tag, $service['endpoint'], $params, $cache_ttl, $layout, $css_class );
+
+        // MAES section filter nach dem Rendering entfernen.
+        if ( 'maes' === $tag ) {
+            remove_all_filters( 'dhps_maes_section' );
+        }
+
+        return $output;
     }
 
     /**

@@ -1162,6 +1162,11 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 				'tagesaktuell'  => 'Tagesaktuell',
 				'kategorisiert' => 'Kategorisiert',
 			),
+			'section'    => array(
+				''              => 'Alle Sektionen',
+				'videos'        => 'Nur Videos',
+				'merkblaetter'  => 'Nur Merkblaetter',
+			),
 			'teasermodus' => array(
 				''  => '(Standard)',
 				'0' => 'Aus',
@@ -1224,6 +1229,7 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 	private function get_control_label( string $key ): string {
 		$labels = array(
 			'variante'     => 'Variante',
+			'section'      => 'Bereich',
 			'modus'        => 'Modus',
 			'st_kategorie' => 'Steuer-Kategorie',
 			'filter'       => 'Filter',
@@ -1333,6 +1339,16 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 			}
 		}
 
+		// MAES-spezifische Settings: Section-Filter setzen.
+		if ( 'maes' === $service_key ) {
+			$maes_section = $settings['section'] ?? '';
+			if ( ! empty( $maes_section ) ) {
+				add_filter( 'dhps_maes_section', function () use ( $maes_section ) { return $maes_section; } );
+			}
+			// section nicht als API-Parameter senden.
+			unset( $params['section'] );
+		}
+
 		// MIO-spezifische Settings als Filter setzen.
 		$mio_services = array( 'mio', 'lxmio' );
 		if ( in_array( $service_key, $mio_services, true ) ) {
@@ -1362,6 +1378,11 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 		// 5. Inhalt ueber die Content-Pipeline abrufen, parsen und rendern.
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML stammt vom Deubner-API-Endpoint und wird ueber die Pipeline verarbeitet.
 		echo self::$pipeline->render_service( $service_key, $service['endpoint'], $params, $cache_ttl, $layout, $custom_class );
+
+		// MAES-Filter entfernen.
+		if ( 'maes' === $service_key ) {
+			remove_all_filters( 'dhps_maes_section' );
+		}
 
 		// MIO-Filter entfernen.
 		if ( in_array( $service_key, $mio_services, true ) ) {

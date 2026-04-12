@@ -24,7 +24,8 @@ $service_tag   = $data['service_tag'] ?? 'mio';
 
 wp_enqueue_script( 'dhps-mio-js' );
 ?>
-<div class="dhps-service <?php echo esc_attr( $service_class . ' ' . $layout_class . $custom_class ); ?>">
+<div class="dhps-service <?php echo esc_attr( $service_class . ' ' . $layout_class . $custom_class ); ?>"
+	 data-style="compact">
 
 	<?php if ( ! empty( $tax_dates ) ) : ?>
 	<section class="dhps-compact-dates" aria-label="<?php echo esc_attr( 'Steuertermine' ); ?>">

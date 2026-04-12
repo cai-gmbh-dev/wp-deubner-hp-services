@@ -216,8 +216,8 @@ class DHPS_MMB_Parser implements DHPS_Parser_Interface {
 		if ( ! empty( $query ) ) {
 			parse_str( $query, $parsed );
 
-			// Nur sichere Parameter uebernehmen - KEINE kd_nr!
-			$safe_keys = array( 'id', 'rubrik', 'header', 'modus' );
+			// Nur sichere Parameter uebernehmen - KEINE kdnr/kd_nr!
+			$safe_keys = array( 'id', 'merkblatt', 'rubrik', 'header', 'modus' );
 			foreach ( $safe_keys as $key ) {
 				if ( isset( $parsed[ $key ] ) ) {
 					$params[ $key ] = sanitize_text_field( $parsed[ $key ] );

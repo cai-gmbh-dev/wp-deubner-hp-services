@@ -277,13 +277,15 @@ class DHPS_AJAX_Proxy {
 			wp_die( 'Ungueltige Anfrage.', 'Fehler', array( 'response' => 403 ) );
 		}
 
-		$merkblatt_id = isset( $_GET['id'] ) ? sanitize_text_field( wp_unslash( $_GET['id'] ) ) : '';
-		$rubrik       = isset( $_GET['rubrik'] ) ? absint( $_GET['rubrik'] ) : 0;
-		$header       = isset( $_GET['header'] ) ? sanitize_text_field( wp_unslash( $_GET['header'] ) ) : '';
-		$modus        = isset( $_GET['modus'] ) ? sanitize_text_field( wp_unslash( $_GET['modus'] ) ) : 'p';
+		$merkblatt = isset( $_GET['merkblatt'] ) ? sanitize_text_field( wp_unslash( $_GET['merkblatt'] ) ) : '';
+		$header    = isset( $_GET['header'] ) ? sanitize_text_field( wp_unslash( $_GET['header'] ) ) : '';
+		// Fallback: Legacy-Parameter 'id' akzeptieren.
+		if ( '' === $merkblatt && isset( $_GET['id'] ) ) {
+			$merkblatt = sanitize_text_field( wp_unslash( $_GET['id'] ) );
+		}
 		// phpcs:enable
 
-		if ( '' === $merkblatt_id ) {
+		if ( '' === $merkblatt ) {
 			wp_die( 'Fehlende Merkblatt-ID.', 'Fehler', array( 'response' => 400 ) );
 		}
 
@@ -295,22 +297,17 @@ class DHPS_AJAX_Proxy {
 			wp_die( 'Service nicht konfiguriert.', 'Fehler', array( 'response' => 400 ) );
 		}
 
-		// PDF-URL serverseitig zusammenbauen.
+		// PDF-URL serverseitig zusammenbauen (neuer Endpoint: controllers/download.php).
 		$pdf_params = array(
-			'kd_nr' => $ota,
-			'id'    => $merkblatt_id,
-			'modus' => $modus,
+			'kdnr'      => $ota,
+			'merkblatt' => $merkblatt,
 		);
-
-		if ( $rubrik > 0 ) {
-			$pdf_params['rubrik'] = $rubrik;
-		}
 
 		if ( '' !== $header ) {
 			$pdf_params['header'] = $header;
 		}
 
-		$pdf_url = DEUBNER_HP_SERVICES_API_BASE . 'einbau/mmo/merkblattpages/mbpdf.php?'
+		$pdf_url = DEUBNER_HP_SERVICES_API_BASE . 'einbau/mmo/controllers/download.php?'
 			. http_build_query( $pdf_params );
 
 		// PDF-Datei vom Server laden und an Client streamen.

@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.9.8
+ * Version: 0.9.9
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -19,7 +19,7 @@
  * Developer Author: Kai R. Emde
  *
  * @package Deubner Homepage-Service
- * @version 0.9.8
+ * @version 0.9.9
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.9.8' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.9.9' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -254,7 +254,10 @@ function dhps_init() {
     $shortcodes = new DHPS_Shortcodes( $client, $renderer, $pipeline );
     $shortcodes->register();
 
-    // 7. WordPress-Widget registrieren.
+    // 7. Steuertermine Standalone-Shortcode.
+    new DHPS_Steuertermine( $client, $cache );
+
+    // 8. WordPress-Widget registrieren.
     add_action( 'widgets_init', function () use ( $client, $renderer ) {
         register_widget( 'DHPS_Widget' );
 
@@ -265,19 +268,19 @@ function dhps_init() {
         }
     } );
 
-    // 8. Elementor-Integration initialisieren (nur wenn Elementor geladen).
-    $elementor = new DHPS_Elementor( $pipeline );
+    // 9. Elementor-Integration initialisieren (nur wenn Elementor geladen).
+    $elementor = new DHPS_Elementor( $pipeline, $client, $cache );
     $elementor->init();
 
-    // 9. Admin-Bereich initialisieren (nur im Backend).
+    // 10. Admin-Bereich initialisieren (nur im Backend).
     if ( is_admin() ) {
         new DHPS_Admin( $demo_manager );
     }
 
-    // 10. Frontend-Assets registrieren.
+    // 11. Frontend-Assets registrieren.
     add_action( 'wp_enqueue_scripts', 'dhps_enqueue_frontend_styles' );
 
-    // 11. GitHub-Updater initialisieren (prueft auf neue Releases).
+    // 12. GitHub-Updater initialisieren (prueft auf neue Releases).
     $updater = new DHPS_GitHub_Updater(
         'cai-gmbh-dev',
         'wp-deubner-hp-services',

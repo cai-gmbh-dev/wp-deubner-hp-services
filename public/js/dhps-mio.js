@@ -383,21 +383,18 @@
 	 */
 	function renderNewsCard( container, data ) {
 		var html = '';
+		var cols = container.getAttribute( 'data-card-columns' ) || '2';
+		var gridClass = 'dhps-mio-card-grid dhps-mio-card-grid--' + cols + 'col';
 
 		data.groups.forEach( function ( group ) {
 			html += '<h3 class="dhps-news__group-title">' + escapeHtml( group.name ) + '</h3>';
-			html += '<div class="dhps-mio-card-grid">';
+			html += '<div class="' + gridClass + '">';
 
 			group.articles.forEach( function ( article ) {
 				html += buildCardArticleHtml( article );
 			} );
 
 			html += '</div>';
-
-			// Detail-Bodies ausserhalb des Grids.
-			group.articles.forEach( function ( article ) {
-				html += buildCardBodyHtml( article );
-			} );
 		} );
 
 		container.innerHTML = html;
@@ -482,6 +479,9 @@
 	 * Haengt Artikel im Card-Layout an.
 	 */
 	function appendNewsCard( container, data ) {
+		var cols = container.getAttribute( 'data-card-columns' ) || '2';
+		var gridClass = 'dhps-mio-card-grid dhps-mio-card-grid--' + cols + 'col';
+
 		data.groups.forEach( function ( group ) {
 			var existingGrid = null;
 			var titles = container.querySelectorAll( '.dhps-news__group-title' );
@@ -492,20 +492,16 @@
 				}
 			} );
 
-			var cardsHtml  = '';
-			var bodiesHtml = '';
+			var cardsHtml = '';
 			group.articles.forEach( function ( article ) {
-				cardsHtml  += buildCardArticleHtml( article );
-				bodiesHtml += buildCardBodyHtml( article );
+				cardsHtml += buildCardArticleHtml( article );
 			} );
 
 			if ( existingGrid ) {
 				existingGrid.insertAdjacentHTML( 'beforeend', cardsHtml );
-				container.insertAdjacentHTML( 'beforeend', bodiesHtml );
 			} else {
 				var fullHtml = '<h3 class="dhps-news__group-title">' + escapeHtml( group.name ) + '</h3>' +
-					'<div class="dhps-mio-card-grid">' + cardsHtml + '</div>' +
-					bodiesHtml;
+					'<div class="' + gridClass + '">' + cardsHtml + '</div>';
 				container.insertAdjacentHTML( 'beforeend', fullHtml );
 			}
 		} );
@@ -665,6 +661,19 @@
 
 		html += '<span class="dhps-mio-card-article__cta">Weiterlesen \u2192</span>';
 
+		// Body INNERHALB der Card (expandiert ueber alle Spalten per CSS).
+		html += '<div class="dhps-news__body dhps-mio-card-article__body" id="' + bodyId + '" aria-hidden="true">';
+		if ( article.body_html ) {
+			html += article.body_html;
+		}
+		html += buildMetaHtml( article );
+		html += '<div class="dhps-news__actions">';
+		html += '<button type="button" class="dhps-news__action-link" data-dhps-collapse="' + bodyId + '">' +
+			'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">' +
+			'<polyline points="18 15 12 9 6 15"/></svg> Ausblenden</button>';
+		html += '</div>';
+		html += '</div>';
+
 		html += '</article>';
 
 		return html;
@@ -702,6 +711,7 @@
 	 * @return {string} HTML-String.
 	 */
 	function buildCompactArticleHtml( article ) {
+		var bodyId = 'dhps-body-' + article.id;
 		var topicLabel = '';
 		if ( article.metadata && article.metadata.topic ) {
 			topicLabel = article.metadata.topic;
@@ -711,7 +721,7 @@
 		}
 
 		var html = '';
-		html += '<div class="dhps-mio-compact__article">';
+		html += '<div class="dhps-mio-compact__article" data-dhps-compact-toggle="' + bodyId + '">';
 		html += '<span class="dhps-mio-compact__article-title">' +
 			escapeHtml( article.title ) + '</span>';
 		if ( topicLabel ) {
@@ -720,6 +730,20 @@
 		}
 		html += '<span class="dhps-mio-compact__article-date">' +
 			escapeHtml( extractDate( article ) ) + '</span>';
+
+		// Inline-Body (versteckt, wird bei Klick geoeffnet).
+		html += '<div class="dhps-news__body dhps-mio-compact__article-body" id="' + bodyId + '" aria-hidden="true">';
+		if ( article.body_html ) {
+			html += article.body_html;
+		}
+		html += buildMetaHtml( article );
+		html += '<div class="dhps-news__actions">';
+		html += '<button type="button" class="dhps-news__action-link" data-dhps-collapse="' + bodyId + '">' +
+			'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">' +
+			'<polyline points="18 15 12 9 6 15"/></svg> Ausblenden</button>';
+		html += '</div>';
+		html += '</div>';
+
 		html += '</div>';
 
 		return html;
@@ -1014,29 +1038,79 @@
 		container.setAttribute( 'data-dhps-events-bound', 'true' );
 
 		container.addEventListener( 'click', function ( e ) {
+			// Default-Accordion: Toggle-Button.
 			var toggleBtn = e.target.closest( '[data-dhps-toggle]' );
 			if ( toggleBtn ) {
 				toggleArticle( toggleBtn );
 				return;
 			}
 
+			// Card-Layout: Klick auf Card oeffnet/schliesst den Body.
+			// Nicht reagieren wenn der Klick innerhalb des Body oder auf Ausblenden war.
 			var card = e.target.closest( '[data-dhps-card-toggle]' );
-			if ( card ) {
+			if ( card && ! e.target.closest( '.dhps-news__body' ) && ! e.target.closest( '[data-dhps-collapse]' ) ) {
 				var bodyId = card.getAttribute( 'data-dhps-card-toggle' );
-				var body   = document.getElementById( bodyId );
+				var body   = card.querySelector( '#' + bodyId ) || document.getElementById( bodyId );
 				if ( body ) {
-					var hidden = body.getAttribute( 'aria-hidden' ) === 'true';
-					body.setAttribute( 'aria-hidden', hidden ? 'false' : 'true' );
+					var wasHidden = body.getAttribute( 'aria-hidden' ) === 'true';
+					body.setAttribute( 'aria-hidden', wasHidden ? 'false' : 'true' );
+
+					// Expanded-Klasse fuer Grid-Spanning (Fallback fuer :has()).
+					card.classList.toggle( 'dhps-mio-card-article--expanded', wasHidden );
 				}
 				return;
 			}
 
+			// Compact-Layout: Klick auf Artikeltitel oeffnet den Volltext.
+			var compactArticle = e.target.closest( '[data-dhps-compact-toggle]' );
+			if ( compactArticle && ! e.target.closest( '.dhps-news__body' ) && ! e.target.closest( '[data-dhps-collapse]' ) ) {
+				var compactBodyId = compactArticle.getAttribute( 'data-dhps-compact-toggle' );
+				var compactBody   = document.getElementById( compactBodyId );
+				if ( compactBody ) {
+					var compactHidden = compactBody.getAttribute( 'aria-hidden' ) === 'true';
+					compactBody.setAttribute( 'aria-hidden', compactHidden ? 'false' : 'true' );
+				}
+				return;
+			}
+
+			// Compact-Layout: Klick auf Gruppen-Header klappt Artikel auf/zu.
+			var compactHeader = e.target.closest( '.dhps-mio-compact__group-header' );
+			if ( compactHeader ) {
+				var group    = compactHeader.closest( '.dhps-mio-compact__group' );
+				var articles = group ? group.querySelector( '.dhps-mio-compact__articles' ) : null;
+				var chevron  = compactHeader.querySelector( '.dhps-mio-compact__chevron' );
+
+				if ( articles ) {
+					var isOpen = articles.style.display !== 'none';
+					articles.style.display = isOpen ? 'none' : '';
+
+					if ( chevron ) {
+						chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+					}
+				}
+				return;
+			}
+
+			// Ausblenden-Button.
 			var collapseBtn = e.target.closest( '[data-dhps-collapse]' );
 			if ( collapseBtn ) {
 				var collapseId   = collapseBtn.getAttribute( 'data-dhps-collapse' );
 				var collapseBody = document.getElementById( collapseId );
 				if ( collapseBody ) {
 					collapseBody.setAttribute( 'aria-hidden', 'true' );
+
+					// Card-Expanded zuruecksetzen und zur Card scrollen.
+					var parentCard = collapseBody.closest( '.dhps-mio-card-article' );
+					if ( parentCard ) {
+						parentCard.classList.remove( 'dhps-mio-card-article--expanded' );
+						parentCard.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
+					}
+
+					// Compact-Artikel: zurueckscrollen.
+					var parentCompact = collapseBody.closest( '.dhps-mio-compact__article' );
+					if ( parentCompact ) {
+						parentCompact.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
+					}
 				}
 				var relatedToggle = container.querySelector( '[data-dhps-toggle="' + collapseId + '"]' );
 				if ( relatedToggle && relatedToggle.getAttribute( 'aria-expanded' ) === 'true' ) {
@@ -1045,6 +1119,7 @@
 				return;
 			}
 
+			// Drucken-Button.
 			var printBtn = e.target.closest( '[data-dhps-print]' );
 			if ( printBtn ) {
 				printArticle( printBtn.getAttribute( 'data-dhps-print' ) );

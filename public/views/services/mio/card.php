@@ -17,6 +17,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+$grid_columns = absint( apply_filters( 'dhps_mio_grid_columns', 2 ) );
+if ( $grid_columns < 1 || $grid_columns > 4 ) { $grid_columns = 2; }
+$mio_style = sanitize_key( apply_filters( 'dhps_mio_style', 'default' ) );
+if ( ! in_array( $mio_style, array( 'default', 'minimal', 'shadow' ), true ) ) { $mio_style = 'default'; }
+
 $tax_dates     = $data['tax_dates'] ?? array();
 $search_config = $data['search_config'] ?? array();
 $ajax_params   = $data['ajax_params'] ?? array();
@@ -24,7 +29,8 @@ $service_tag   = $data['service_tag'] ?? 'mio';
 
 wp_enqueue_script( 'dhps-mio-js' );
 ?>
-<div class="dhps-service <?php echo esc_attr( $service_class . ' ' . $layout_class . $custom_class ); ?>">
+<div class="dhps-service <?php echo esc_attr( $service_class . ' ' . $layout_class . ' dhps-mio-style--' . $mio_style . $custom_class ); ?>"
+	 data-style="<?php echo esc_attr( $mio_style ); ?>">
 <div class="dhps-card">
 
 	<?php if ( ! empty( $tax_dates ) ) : ?>
@@ -109,6 +115,7 @@ wp_enqueue_script( 'dhps-mio-js' );
 			 aria-live="polite"
 			 data-dhps-news-container
 			 data-layout="card"
+			 data-card-columns="<?php echo esc_attr( $grid_columns ); ?>"
 			 data-service-tag="<?php echo esc_attr( $service_tag ); ?>"
 			 data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
 			 data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_news_nonce' ) ); ?>"

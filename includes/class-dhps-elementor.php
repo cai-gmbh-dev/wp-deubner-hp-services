@@ -35,15 +35,36 @@ class DHPS_Elementor {
 	private $pipeline;
 
 	/**
+	 * API-Client fuer Steuertermine-Widget.
+	 *
+	 * @since 0.9.8
+	 * @var DHPS_API_Client|null
+	 */
+	private $client;
+
+	/**
+	 * Cache fuer Steuertermine-Widget.
+	 *
+	 * @since 0.9.8
+	 * @var DHPS_Cache|null
+	 */
+	private $cache;
+
+	/**
 	 * Konstruktor.
 	 *
 	 * @since 0.5.0
 	 * @since 0.9.3 Ersetzt API-Client + Renderer durch Content-Pipeline.
+	 * @since 0.9.8 Optionale Dependencies fuer Steuertermine-Widget.
 	 *
-	 * @param DHPS_Content_Pipeline $pipeline Content-Pipeline-Instanz.
+	 * @param DHPS_Content_Pipeline    $pipeline Content-Pipeline-Instanz.
+	 * @param DHPS_API_Client|null     $client   API-Client (optional, fuer Steuertermine).
+	 * @param DHPS_Cache|null          $cache    Cache (optional, fuer Steuertermine).
 	 */
-	public function __construct( DHPS_Content_Pipeline $pipeline ) {
+	public function __construct( DHPS_Content_Pipeline $pipeline, ?DHPS_API_Client $client = null, ?DHPS_Cache $cache = null ) {
 		$this->pipeline = $pipeline;
+		$this->client   = $client;
+		$this->cache    = $cache;
 	}
 
 	/**
@@ -102,9 +123,11 @@ class DHPS_Elementor {
 	public function register_widgets( $widgets_manager ): void {
 		require_once DEUBNER_HP_SERVICES_PATH . 'widgets/elementor/class-dhps-elementor-widget-base.php';
 		require_once DEUBNER_HP_SERVICES_PATH . 'widgets/elementor/class-dhps-elementor-service-widgets.php';
+		require_once DEUBNER_HP_SERVICES_PATH . 'widgets/elementor/class-dhps-elementor-widget-steuertermine.php';
 
 		DHPS_Elementor_Widget_Base::set_dependencies( $this->pipeline );
 
+		// 9 Service-Widgets.
 		$widget_classes = array(
 			'DHPS_Elementor_Widget_MIO',
 			'DHPS_Elementor_Widget_LXMIO',
@@ -119,6 +142,12 @@ class DHPS_Elementor {
 
 		foreach ( $widget_classes as $class ) {
 			$widgets_manager->register( new $class() );
+		}
+
+		// Steuertermine-Widget (eigenstaendig, mit eigenen Dependencies).
+		if ( null !== $this->client && null !== $this->cache ) {
+			DHPS_Elementor_Widget_Steuertermine::set_dependencies( $this->client, $this->cache );
+			$widgets_manager->register( new DHPS_Elementor_Widget_Steuertermine() );
 		}
 	}
 }

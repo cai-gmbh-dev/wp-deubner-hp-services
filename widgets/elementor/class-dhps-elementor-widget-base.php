@@ -309,6 +309,51 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 
 		/*
 		 * ---------------------------------------------------------------
+		 * Section 2b: MIO-Layout (nur fuer MIO/LXMIO)
+		 * ---------------------------------------------------------------
+		 */
+		$mio_services = array( 'mio', 'lxmio' );
+		if ( in_array( $this->get_service_key(), $mio_services, true ) ) {
+			$this->start_controls_section(
+				'section_mio_layout',
+				array(
+					'label' => 'Nachrichten-Layout',
+					'tab'   => \Elementor\Controls_Manager::TAB_CONTENT,
+				)
+			);
+
+			// News-Grid-Spalten (Card-Layout).
+			$this->add_control( 'mio_columns', array(
+				'label'       => 'Spalten (Card-Grid)',
+				'description' => 'Spaltenanzahl fuer das Card-Layout der Nachrichten.',
+				'type'        => \Elementor\Controls_Manager::SELECT,
+				'options'     => array(
+					'1' => '1 Spalte',
+					'2' => '2 Spalten',
+					'3' => '3 Spalten',
+					'4' => '4 Spalten',
+				),
+				'default'     => '2',
+				'condition'   => array( 'layout' => 'card' ),
+			) );
+
+			// Style Preset.
+			$this->add_control( 'mio_style', array(
+				'label'   => 'Stil',
+				'type'    => \Elementor\Controls_Manager::SELECT,
+				'options' => array(
+					'default' => 'Standard',
+					'minimal' => 'Minimal',
+					'shadow'  => 'Schatten',
+				),
+				'default' => 'default',
+			) );
+
+			$this->end_controls_section();
+		}
+
+		/*
+		 * ---------------------------------------------------------------
 		 * Section 3: Stil - Ueberschriften
 		 * ---------------------------------------------------------------
 		 */
@@ -383,13 +428,13 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 
 		/*
 		 * ---------------------------------------------------------------
-		 * Section 4: Stil - Video-Cards
+		 * Section 4: Stil - Cards
 		 * ---------------------------------------------------------------
 		 */
 		$this->start_controls_section(
 			'section_style_card',
 			array(
-				'label' => 'Video-Cards',
+				'label' => 'Cards',
 				'tab'   => \Elementor\Controls_Manager::TAB_STYLE,
 			)
 		);
@@ -463,7 +508,7 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 		);
 
 		$this->add_control(
-			'card_border_color',
+			'card_normal_border_color',
 			array(
 				'label'     => 'Rahmenfarbe',
 				'type'      => \Elementor\Controls_Manager::COLOR,
@@ -1192,6 +1237,16 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 			}
 		}
 
+		// MIO-spezifische Settings als Filter setzen.
+		$mio_services = array( 'mio', 'lxmio' );
+		if ( in_array( $service_key, $mio_services, true ) ) {
+			$mio_columns = $settings['mio_columns'] ?? '2';
+			$mio_style   = $settings['mio_style'] ?? 'default';
+
+			add_filter( 'dhps_mio_grid_columns', function () use ( $mio_columns ) { return $mio_columns; } );
+			add_filter( 'dhps_mio_style', function () use ( $mio_style ) { return $mio_style; } );
+		}
+
 		// TP-spezifische Settings als Filter setzen (werden im Template ausgelesen).
 		$video_services = array( 'tp', 'tpt' );
 		if ( in_array( $service_key, $video_services, true ) ) {
@@ -1211,6 +1266,12 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 		// 5. Inhalt ueber die Content-Pipeline abrufen, parsen und rendern.
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML stammt vom Deubner-API-Endpoint und wird ueber die Pipeline verarbeitet.
 		echo self::$pipeline->render_service( $service_key, $service['endpoint'], $params, $cache_ttl, $layout, $custom_class );
+
+		// MIO-Filter entfernen.
+		if ( in_array( $service_key, $mio_services, true ) ) {
+			remove_all_filters( 'dhps_mio_grid_columns' );
+			remove_all_filters( 'dhps_mio_style' );
+		}
 
 		// TP-Filter wieder entfernen, damit sie nicht in andere Widget-Instanzen leaken.
 		if ( in_array( $service_key, $video_services, true ) ) {

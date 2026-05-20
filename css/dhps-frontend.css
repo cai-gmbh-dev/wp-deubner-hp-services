@@ -1759,14 +1759,69 @@
 	color: #fff;
 }
 
-/* Service-Farben: recht → blau, medizin → teal. */
+/* Service-Farben: recht -> blau, medizin -> teal. */
 .dhps-service--lxmio .dhps-filter-bar,
 .dhps-service--lp .dhps-filter-bar {
-	--dhps-filter-color: var(--dhps-color-recht, #1E73BE);
+	--dhps-filter-color: var(--dhps-color-recht, #0054A6);
 }
 
 .dhps-service--maes .dhps-filter-bar {
 	--dhps-filter-color: var(--dhps-color-medizin, #0097a7);
+}
+
+/* LP (Lexplain) Recht-Branding: Blau statt Steuern-Gruen */
+.dhps-service--lp .dhps-tp-featured__heading,
+.dhps-service--lp .dhps-tp-catalog__heading {
+	color: var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-service--lp .dhps-tp-card__poster:focus-visible {
+	outline-color: var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-service--lp .dhps-tp-card__play-btn polygon {
+	fill: var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-service--lp .dhps-tp-load-more {
+	background: var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-service--lp .dhps-tp-load-more:hover {
+	background: var(--dhps-color-recht-hover, #003A73);
+}
+
+.dhps-service--lp.dhps-tp-style--shadow .dhps-tp-card:hover {
+	box-shadow: 0 0 12px 0 rgba(0, 84, 166, 0.25);
+}
+
+/* LXMIO Recht-Branding: Blau statt Steuern-Gruen */
+.dhps-service--lxmio .dhps-news__group-title,
+.dhps-service--lxmio .dhps-news__title {
+	color: var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-service--lxmio .dhps-news__body {
+	border-left-color: var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-service--lxmio .dhps-tax-dates__title {
+	color: var(--dhps-color-recht, #0054A6);
+	border-bottom-color: var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-service--lxmio .dhps-mio-card-article__tag {
+	background: var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-service--lxmio .dhps-news__load-more-btn,
+.dhps-service--lxmio .dhps-search-bar__button {
+	background: var(--dhps-color-recht, #0054A6);
+}
+
+.dhps-service--lxmio .dhps-news__load-more-btn:hover,
+.dhps-service--lxmio .dhps-search-bar__button:hover {
+	background: var(--dhps-color-recht-hover, #003A73);
 }
 
 /* ==========================================================================

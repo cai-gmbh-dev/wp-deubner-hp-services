@@ -375,21 +375,46 @@ class DHPS_AJAX_Proxy {
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce bereits geprueft.
-		$video_slug = isset( $_POST['video_slug'] ) ? sanitize_text_field( wp_unslash( $_POST['video_slug'] ) ) : '';
-		$poster_url = isset( $_POST['poster_url'] ) ? esc_url_raw( wp_unslash( $_POST['poster_url'] ) ) : '';
-		$v_modus    = isset( $_POST['v_modus'] ) ? absint( $_POST['v_modus'] ) : 0;
+		$video_slug   = isset( $_POST['video_slug'] ) ? sanitize_text_field( wp_unslash( $_POST['video_slug'] ) ) : '';
+		$poster_url   = isset( $_POST['poster_url'] ) ? esc_url_raw( wp_unslash( $_POST['poster_url'] ) ) : '';
+		$v_modus      = isset( $_POST['v_modus'] ) ? absint( $_POST['v_modus'] ) : 0;
+		$service_name = isset( $_POST['service'] ) ? sanitize_key( wp_unslash( $_POST['service'] ) ) : 'taxplain';
 		// phpcs:enable
 
 		if ( '' === $video_slug ) {
 			wp_send_json_error( array( 'message' => 'Fehlender Video-Slug.' ), 400 );
 		}
 
-		// Authentifizierung serverseitig aus der Datenbank holen.
-		// Primaer: kdnr (TaxPlain Teaser). Fallback: OTA (TaxPlain Videos).
-		$kdnr = get_option( 'dhps_tp_kdnr', '' );
+		// SSRF-Schutz: Poster-URL Host gegen Whitelist pruefen.
+		if ( '' !== $poster_url ) {
+			$host_allowlist = array( 'www.deubner-online.de', 'deubner-online.de', 'www.mandantenvideo.de', 'mandantenvideo.de' );
+			$poster_host    = wp_parse_url( $poster_url, PHP_URL_HOST );
+			if ( null === $poster_host || ! in_array( strtolower( $poster_host ), $host_allowlist, true ) ) {
+				// Bei nicht erlaubtem Host: poster_url verwerfen.
+				$poster_url = '';
+			}
+		}
 
-		if ( '' === $kdnr ) {
-			$kdnr = get_option( 'dhps_ota_tp', '' );
+		// Erlaubte Services (Whitelist): taxplain, lexplain, maes.
+		$allowed_video_services = array( 'taxplain', 'lexplain', 'maes' );
+		if ( ! in_array( $service_name, $allowed_video_services, true ) ) {
+			$service_name = 'taxplain';
+		}
+
+		// Authentifizierung serverseitig aus der Datenbank holen.
+		// Service-spezifische Optionen pruefen.
+		$auth_keys = array(
+			'taxplain' => array( 'dhps_tp_kdnr', 'dhps_ota_tp' ),
+			'lexplain' => array( 'dhps_lp_ota', 'dhps_lp_kdnr' ),
+			'maes'     => array( 'dhps_maes_kdnr' ),
+		);
+
+		$kdnr = '';
+		foreach ( $auth_keys[ $service_name ] ?? array() as $option_key ) {
+			$kdnr = get_option( $option_key, '' );
+			if ( '' !== $kdnr ) {
+				break;
+			}
 		}
 
 		if ( '' === $kdnr ) {
@@ -403,7 +428,7 @@ class DHPS_AJAX_Proxy {
 				'poster'  => $poster_url,
 				'kdnr'    => $kdnr,
 				'v_modus' => $v_modus,
-				'service' => 'taxplain',
+				'service' => $service_name,
 			),
 			'https://www.mandantenvideo.de/commons/bin_videos/videoshow_simple.html'
 		);

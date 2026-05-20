@@ -98,12 +98,18 @@
 		var videoMode = serviceContainer ? ( serviceContainer.getAttribute( 'data-video-mode' ) || '' ).trim() : '';
 		var useModal  = ( videoMode === 'modal' );
 
+		// Service-Parameter (taxplain/lexplain/maes) fuer AJAX-Proxy.
+		var serviceName = serviceContainer ? ( serviceContainer.getAttribute( 'data-service' ) || '' ).trim() : '';
+
 		var formData = new FormData();
 		formData.append( 'action', 'dhps_tp_video_src' );
 		formData.append( 'nonce', config.nonce );
 		formData.append( 'video_slug', videoSlug );
 		formData.append( 'poster_url', posterUrl );
 		formData.append( 'v_modus', vModus );
+		if ( serviceName ) {
+			formData.append( 'service', serviceName );
+		}
 
 		fetch( config.ajaxUrl, {
 			method: 'POST',

@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.10.2
+ * Version: 0.11.0
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -19,7 +19,7 @@
  * Developer Author: Kai R. Emde
  *
  * @package Deubner Homepage-Service
- * @version 0.10.2
+ * @version 0.11.0
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.10.2' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.11.0' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -242,6 +242,10 @@ function dhps_init() {
     // TP-Parser registrieren (TaxPlain Videos).
     $tp_parser = new DHPS_TP_Parser();
     DHPS_Parser_Registry::register( 'tp', $tp_parser );
+
+    // LP-Parser registrieren (Lexplain - erbt von TP, Recht-Branding).
+    $lp_parser = new DHPS_LP_Parser();
+    DHPS_Parser_Registry::register( 'lp', $lp_parser );
 
     // MAES-Parser registrieren (Meine Aerzteseite).
     $maes_parser = new DHPS_MAES_Parser();

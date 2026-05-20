@@ -62,6 +62,14 @@ if ( ! in_array( $tp_style, array( 'default', 'minimal', 'shadow' ), true ) ) {
 wp_enqueue_script( 'dhps-tp-js' );
 
 $video_index = 0;
+
+// service-Parameter fuer AJAX-Proxy (taxplain/lexplain): aus erstem Video ableiten.
+$video_service = 'taxplain';
+if ( ! empty( $featured['service'] ) ) {
+	$video_service = $featured['service'];
+} elseif ( ! empty( $categories[0]['videos'][0]['service'] ) ) {
+	$video_service = $categories[0]['videos'][0]['service'];
+}
 ?>
 <div class="dhps-service <?php echo esc_attr( $service_class . ' ' . $layout_class . $custom_class ); ?> dhps-tp-style--<?php echo esc_attr( $tp_style ); ?>"
 	 data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
@@ -70,7 +78,8 @@ $video_index = 0;
 	 data-columns="<?php echo esc_attr( $grid_columns ); ?>"
 	 data-lazy-count="<?php echo esc_attr( $lazy_count ); ?>"
 	 data-lazy-mode="<?php echo esc_attr( $lazy_mode ); ?>"
-	 data-video-mode="<?php echo esc_attr( $video_mode ); ?>">
+	 data-video-mode="<?php echo esc_attr( $video_mode ); ?>"
+	 data-service="<?php echo esc_attr( $video_service ); ?>">
 <div class="dhps-card">
 
 	<h3 class="dhps-tp-catalog__heading"><?php echo esc_html( 'TaxPlain Video-Tipps' ); ?></h3>

@@ -1825,6 +1825,79 @@
 }
 
 /* ==========================================================================
+   TC: Tax-Rechner (TaxCalc Wrapper)
+   ========================================================================== */
+
+.dhps-service--tc {
+	font-family: var(--dhps-font-family, "Lato", sans-serif);
+}
+
+.dhps-tc__container {
+	background: var(--dhps-color-bg-white, #fff);
+	border: 1px solid var(--dhps-color-border, #ddd);
+	padding: 20px;
+}
+
+.dhps-tc__container--compact {
+	padding: 12px;
+	border: none;
+}
+
+/* Anti-Konflikt: TC bringt eigene Akkordeon-Styles mit (block{id}, calc_area{id}).
+   Wir vererben nur die Schriftfamilie und neutrale Resets. */
+.dhps-service--tc .dhps-tc__container .taxcalc {
+	font-family: inherit;
+}
+
+/* Steuern-Gruen Akzent fuer TC-interne Header/Buttons (sofern moeglich). */
+.dhps-service--tc .dhps-tc__container h2,
+.dhps-service--tc .dhps-tc__container h3,
+.dhps-service--tc .dhps-tc__container h4 {
+	color: var(--dhps-color-steuern, #0AA245);
+}
+
+/* Empty-State Styling */
+.dhps-tc__empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	padding: 40px 20px;
+	background: var(--dhps-color-bg-alt, #f2f2f2);
+	border: 1px dashed var(--dhps-color-border, #ddd);
+}
+
+.dhps-tc__empty-icon {
+	color: var(--dhps-color-meta, #999);
+	margin-bottom: 16px;
+}
+
+.dhps-tc__empty-title {
+	font-size: 1.0625rem;
+	font-weight: 600;
+	color: var(--dhps-color-text, #333);
+	margin: 0 0 8px;
+}
+
+.dhps-tc__empty-text {
+	font-size: 0.875rem;
+	color: var(--dhps-color-text-light, #555);
+	margin: 0;
+	max-width: 400px;
+	line-height: 1.5;
+}
+
+.dhps-tc__empty--compact {
+	padding: 16px;
+	flex-direction: row;
+	gap: 8px;
+}
+
+.dhps-tc__empty--compact .dhps-tc__empty-text {
+	font-size: 0.8125rem;
+}
+
+/* ==========================================================================
    TPT: TaxPlain Teaser (Single Video Card)
    ========================================================================== */
 

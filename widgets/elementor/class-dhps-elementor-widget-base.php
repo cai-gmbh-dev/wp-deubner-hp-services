@@ -236,8 +236,11 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 		 * Section 2: Video-Layout (nur fuer TP/TPT)
 		 * ---------------------------------------------------------------
 		 */
-		$video_services = array( 'tp', 'tpt' );
-		if ( in_array( $this->get_service_key(), $video_services, true ) ) {
+		$video_services    = array( 'tp', 'tpt' );
+		$is_video_service  = in_array( $this->get_service_key(), $video_services, true );
+		$is_tpt            = ( 'tpt' === $this->get_service_key() );
+
+		if ( $is_video_service ) {
 			$this->start_controls_section(
 				'section_video_layout',
 				array(
@@ -246,42 +249,45 @@ abstract class DHPS_Elementor_Widget_Base extends \Elementor\Widget_Base {
 				)
 			);
 
-			// Grid-Spalten (1-4).
-			$this->add_control( 'tp_columns', array(
-				'label'   => 'Spalten',
-				'type'    => \Elementor\Controls_Manager::SELECT,
-				'options' => array(
-					'1' => '1 Spalte',
-					'2' => '2 Spalten',
-					'3' => '3 Spalten',
-					'4' => '4 Spalten',
-				),
-				'default' => '3',
-			) );
+			// Grid-Spalten + Lazy Loading nur fuer TP (Galerie), nicht TPT (Single Video).
+			if ( ! $is_tpt ) {
+				// Grid-Spalten (1-4).
+				$this->add_control( 'tp_columns', array(
+					'label'   => 'Spalten',
+					'type'    => \Elementor\Controls_Manager::SELECT,
+					'options' => array(
+						'1' => '1 Spalte',
+						'2' => '2 Spalten',
+						'3' => '3 Spalten',
+						'4' => '4 Spalten',
+					),
+					'default' => '3',
+				) );
 
-			// Lazy Loading Count.
-			$this->add_control( 'tp_lazy_count', array(
-				'label'       => 'Initiale Videos',
-				'description' => 'Anzahl der sofort sichtbaren Videos (0 = alle)',
-				'type'        => \Elementor\Controls_Manager::NUMBER,
-				'default'     => 0,
-				'min'         => 0,
-				'max'         => 100,
-			) );
+				// Lazy Loading Count.
+				$this->add_control( 'tp_lazy_count', array(
+					'label'       => 'Initiale Videos',
+					'description' => 'Anzahl der sofort sichtbaren Videos (0 = alle)',
+					'type'        => \Elementor\Controls_Manager::NUMBER,
+					'default'     => 0,
+					'min'         => 0,
+					'max'         => 100,
+				) );
 
-			// Lazy Loading Mode.
-			$this->add_control( 'tp_lazy_mode', array(
-				'label'     => 'Nachladen',
-				'type'      => \Elementor\Controls_Manager::SELECT,
-				'options'   => array(
-					'manual' => 'Manuell (Button)',
-					'auto'   => 'Automatisch (Scroll)',
-				),
-				'default'   => 'manual',
-				'condition' => array( 'tp_lazy_count!' => 0 ),
-			) );
+				// Lazy Loading Mode.
+				$this->add_control( 'tp_lazy_mode', array(
+					'label'     => 'Nachladen',
+					'type'      => \Elementor\Controls_Manager::SELECT,
+					'options'   => array(
+						'manual' => 'Manuell (Button)',
+						'auto'   => 'Automatisch (Scroll)',
+					),
+					'default'   => 'manual',
+					'condition' => array( 'tp_lazy_count!' => 0 ),
+				) );
+			}
 
-			// Style Preset.
+			// Style Preset (auch fuer TPT relevant).
 			$this->add_control( 'tp_style', array(
 				'label'   => 'Stil',
 				'type'    => \Elementor\Controls_Manager::SELECT,

@@ -237,7 +237,7 @@ class DHPS_TP_Parser implements DHPS_Parser_Interface {
 	 *
 	 * @return array|null Video-Daten oder null bei Fehlern.
 	 */
-	private function parse_video_block( DOMElement $container, DOMXPath $xpath, bool $is_featured ): ?array {
+	protected function parse_video_block( DOMElement $container, DOMXPath $xpath, bool $is_featured ): ?array {
 		$video = array(
 			'video_id'   => '',
 			'video_slug' => '',

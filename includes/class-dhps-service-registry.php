@@ -331,11 +331,12 @@ class DHPS_Service_Registry {
              */
             'tpt' => array(
                 'name'           => 'TaxPlain Teaser',
-                'endpoint'       => 'taxplain/videopages/teaser_php.php',
-                'auth_type'      => 'kdnr',
-                'auth_option'    => 'dhps_tp_kdnr',
+                'endpoint'       => 'einbau/taxplain/videopages/php_inhalt.php',
+                'auth_type'      => 'ota',
+                'auth_option'    => 'dhps_ota_tp',
                 'shortcode_atts' => array(
                     'layout' => 'default',
+                    'modus'  => '',
                     'class'  => '',
                     'cache'  => '3600',
                 ),
@@ -345,8 +346,8 @@ class DHPS_Service_Registry {
                     'dhps_tpt_breite'     => 'breite',
                     'dhps_tpt_modus'      => 'modus',
                 ),
-                'supports_video' => false,
-                'default_params' => array(),
+                'supports_video' => true,
+                'default_params' => array( 'teasermodus' => '1' ),
                 'admin_page'     => 'dhps_tp_page',
                 'admin_title'    => 'TaxPlain Teaser',
                 'category'       => 'steuern',

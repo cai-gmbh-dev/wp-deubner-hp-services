@@ -10,6 +10,72 @@
  */
 
 /* ==========================================================================
+   Accessibility-Baseline (a11y) - seit 0.13.1
+   Plugin-eigene Definitionen, unabhaengig von WP-Core-Themes.
+   ========================================================================== */
+
+/* Visually hidden (Standard-WP-Pattern, hier plugin-eigen damit es
+   unabhaengig vom aktiven Theme funktioniert). */
+.dhps-service .screen-reader-text,
+.dhps-service .dhps-sr-only {
+	border: 0;
+	clip: rect(1px, 1px, 1px, 1px);
+	-webkit-clip-path: inset(50%);
+	clip-path: inset(50%);
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	padding: 0;
+	position: absolute;
+	width: 1px;
+	word-wrap: normal !important;
+}
+
+.dhps-service .screen-reader-text:focus,
+.dhps-service .dhps-sr-only:focus {
+	background-color: #f1f1f1;
+	-webkit-clip-path: none;
+	clip-path: none;
+	clip: auto;
+	color: #21759b;
+	display: block;
+	font-size: 0.875rem;
+	font-weight: 700;
+	height: auto;
+	left: 5px;
+	line-height: normal;
+	padding: 15px 23px 14px;
+	text-decoration: none;
+	top: 5px;
+	width: auto;
+	z-index: 100000;
+}
+
+/* Konsistenter Focus-Indikator auf allen interaktiven Plugin-Elementen. */
+.dhps-service a:focus-visible,
+.dhps-service button:focus-visible,
+.dhps-service input:focus-visible,
+.dhps-service select:focus-visible,
+.dhps-service textarea:focus-visible,
+.dhps-service [tabindex]:focus-visible {
+	outline: 2px solid var(--dhps-color-primary, #0AA245);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+/* Reduced-Motion: Animationen, Transitions und Smooth-Scroll deaktivieren. */
+@media (prefers-reduced-motion: reduce) {
+	.dhps-service *,
+	.dhps-service *::before,
+	.dhps-service *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* ==========================================================================
    Basis-Container
    ========================================================================== */
 

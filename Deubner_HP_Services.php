@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.13.0
+ * Version: 0.13.1
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -19,7 +19,7 @@
  * Developer Author: Kai R. Emde
  *
  * @package Deubner Homepage-Service
- * @version 0.13.0
+ * @version 0.13.1
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.13.0' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.13.1' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -376,6 +376,15 @@ function dhps_enqueue_frontend_styles() {
     wp_register_script(
         'dhps-tp-js',
         DEUBNER_HP_SERVICES_URL . 'public/js/dhps-tp.js',
+        array(),
+        DEUBNER_HP_SERVICES_VERSION,
+        true
+    );
+
+    // MAES-Aktuelles-JavaScript (Akkordeon-Toggle, seit 0.13.1 ausgelagert).
+    wp_register_script(
+        'dhps-maes-aktuelles-js',
+        DEUBNER_HP_SERVICES_URL . 'public/js/dhps-maes-aktuelles.js',
         array(),
         DEUBNER_HP_SERVICES_VERSION,
         true

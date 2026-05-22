@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( empty( $news ) ) {
 	return;
 }
+
+// Konditionales Enqueue des ausgelagerten Akkordeon-Scripts (seit 0.13.1).
+wp_enqueue_script( 'dhps-maes-aktuelles-js' );
 ?>
 <div class="dhps-service dhps-service--maes-aktuelles<?php echo esc_attr( $custom_class ); ?>">
 
@@ -66,22 +69,3 @@ if ( empty( $news ) ) {
 	<?php endforeach; ?>
 
 </div>
-<script>
-(function(){
-	document.querySelectorAll('.dhps-service--maes-aktuelles').forEach(function(c){
-		c.addEventListener('click',function(e){
-			var t=e.target.closest('[data-dhps-toggle]');
-			if(t){var id=t.getAttribute('data-dhps-toggle'),b=document.getElementById(id);
-				if(b){var x=t.getAttribute('aria-expanded')==='true';
-					t.setAttribute('aria-expanded',x?'false':'true');
-					b.setAttribute('aria-hidden',x?'true':'false');}return;}
-			var col=e.target.closest('[data-dhps-collapse]');
-			if(col){var cid=col.getAttribute('data-dhps-collapse'),cb=document.getElementById(cid);
-				if(cb){cb.setAttribute('aria-hidden','true');
-					var rt=c.querySelector('[data-dhps-toggle="'+cid+'"]');
-					if(rt)rt.setAttribute('aria-expanded','false');
-					rt&&rt.scrollIntoView({behavior:'smooth',block:'nearest'});}return;}
-		});
-	});
-})();
-</script>

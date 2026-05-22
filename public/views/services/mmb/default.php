@@ -73,6 +73,23 @@ wp_enqueue_script( 'dhps-mmb-js' );
 		</div>
 	</div>
 
+	<?php if ( count( $categories ) > 1 ) : ?>
+	<!-- Kategorie-Filter (Feature-Parity mit compact/card-Layout, seit 0.13.1). -->
+	<nav class="dhps-filter-bar" data-dhps-mmb-filter-bar aria-label="<?php echo esc_attr( 'Kategorie-Filter' ); ?>">
+		<button class="dhps-filter-bar__btn dhps-filter-bar__btn--active"
+				data-filter="all" aria-pressed="true">
+			<?php echo esc_html( 'Alle' ); ?>
+		</button>
+		<?php foreach ( $categories as $category ) : ?>
+		<button class="dhps-filter-bar__btn"
+				data-filter="<?php echo esc_attr( $category['id'] ); ?>"
+				aria-pressed="false">
+			<?php echo esc_html( $category['name'] ); ?>
+		</button>
+		<?php endforeach; ?>
+	</nav>
+	<?php endif; ?>
+
 	<?php if ( ! empty( $categories ) ) : ?>
 	<!-- Rubriken-Accordion -->
 	<section class="dhps-mmb-categories"
@@ -87,7 +104,9 @@ wp_enqueue_script( 'dhps-mmb-js' );
 			$cat_count = count( $category['fact_sheets'] );
 			$is_first  = ( 0 === $index );
 		?>
-		<div class="dhps-mmb-category" data-dhps-mmb-category>
+		<div class="dhps-mmb-category"
+			 data-dhps-mmb-category
+			 data-category="<?php echo esc_attr( $category['id'] ); ?>">
 
 			<h3 class="dhps-mmb-category__header">
 				<button type="button"

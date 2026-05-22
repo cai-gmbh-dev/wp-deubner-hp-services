@@ -1,0 +1,26 @@
+# Alpine.js Vendor-Manifest
+# Format: key=value (Shell-/dotenv-kompatibel)
+# Pflege: bei jedem Vendor-Update aktualisieren.
+
+name=alpinejs
+version=3.14.9
+target_filename=alpinejs-3.14.x.min.js
+source_url=https://unpkg.com/alpinejs@3.14.9/dist/cdn.min.js
+mirror_url=https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js
+license=MIT
+license_url=https://github.com/alpinejs/alpine/blob/main/LICENSE.md
+
+# SHA-256 nach Download manuell eintragen:
+#   PowerShell: Get-FileHash -Algorithm SHA256 alpinejs-3.14.x.min.js
+#   Bash:       sha256sum alpinejs-3.14.x.min.js
+sha256=3ed1eed252488921df65e363d6715deb04d7f92aaedb9e52199fdf73cb1e0ad3
+
+# Tatsaechliche Groessen.
+size_min=44758
+size_min_gz=~16KB
+
+# Download-Historie:
+# - F2 (Specialist-Agent): skipped_sandbox_restriction (2026-05-22)
+# - Lead-Agent: success via Host-curl (2026-05-22)
+download_status=success
+download_completed_at=2026-05-22

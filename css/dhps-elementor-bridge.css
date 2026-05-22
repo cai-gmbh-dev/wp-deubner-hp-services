@@ -1,0 +1,62 @@
+/**
+ * Elementor Atomic-Token Bridge (optionales Stylesheet)
+ *
+ * Koppelt ausgewaehlte generische UI-Tokens (Text, Primaerfarbe, Schrift,
+ * Basis-Schriftgroesse) an Elementor-4.x-Globals, sodass User-Theming via
+ * Elementor Global Settings durchgreift.
+ *
+ * WICHTIG: Diese Datei wird NUR geladen, wenn die WordPress-Option
+ *   dhps_elementor_bridge_enabled = '1'
+ * im Plugin-Settings-Screen aktiv ist (Default: 0 / abgeschaltet).
+ * Der bedingte Enqueue findet im Haupt-Loader Deubner_HP_Services.php
+ * statt. Wird die Datei statisch geladen, ist sie nebenwirkungsfrei -
+ * sie ueberschreibt nur die genannten Tokens mit derselben Fallback-Kette,
+ * die ohnehin im Plugin-Default verwendet werden.
+ *
+ * NICHT GEBRIDGED (bewusste Architektur-Entscheidung, Specialist-A-Report):
+ *   --dhps-color-steuern, --dhps-color-recht, --dhps-color-medizin
+ * Brand-Tokens muessen stabil bleiben, sonst zerstoert User-Theming
+ * das Service-Branding (Steuern-Gruen / Recht-Blau / Medizin-Teal).
+ *
+ * @package Deubner Homepage-Service
+ * @since   0.14.0
+ */
+
+/* @layer-Cascade-Definition bestaetigen (identisch zu dhps-design-tokens.css).
+   Erneutes Listen ist kein Konflikt - Browser konsolidieren identische
+   Layer-Reihenfolgen idempotent. */
+@layer dhps-reset, dhps-tokens, dhps-components, dhps-utilities, dhps-overrides;
+
+@layer dhps-tokens {
+
+  :root {
+    /* Text-Farbe: nimmt Elementor-Global, sonst Plugin-Default #333333.
+       Doppelte Fallback-Kette deckt 4.x-Atomic (--e-global-color-text)
+       und potenzielle Legacy-Aliase (--e-color-text) ab. */
+    --dhps-color-text: var(--e-global-color-text, var(--e-color-text, #333333));
+
+    /* Primaerfarbe: Elementor-Global mit Plugin-Brand-Fallback.
+       Hinweis: Dies bridget ABSICHTLICH nur die generische --dhps-color-primary,
+       NICHT die Brand-Tokens --dhps-color-steuern/recht/medizin. */
+    --dhps-color-primary: var(
+      --e-global-color-primary,
+      var(--e-color-primary, var(--dhps-color-steuern, #0AA245))
+    );
+
+    /* Hauptschriftart: Elementor-Global Typography Primary, sonst Plugin-Default. */
+    --dhps-font-family: var(
+      --e-global-typography-primary-font-family,
+      "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif
+    );
+
+    /* Basis-Schriftgroesse: Elementor-Global, sonst Plugin-Default 0.875rem.
+       Achtung: --e-global-typography-primary-font-size kann eine konkrete
+       Pixelgroesse liefern; CSS verarbeitet das ueber den var()-Fallback
+       transparent. */
+    --dhps-fs-base: var(
+      --e-global-typography-primary-font-size,
+      0.875rem
+    );
+  }
+
+} /* /@layer dhps-tokens */

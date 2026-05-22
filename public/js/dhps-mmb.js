@@ -53,23 +53,130 @@
 
 	/**
 	 * Rubrik-Accordion: Auf-/Zuklappen der Rubriken.
+	 *
+	 * Seit 0.14.0: Bei erstem Open einer Kategorie mit
+	 * data-dhps-mmb-lazy-state="pending" wird der Inhalt via AJAX nachgeladen
+	 * (Endpoint: dhps_mmb_category_load).
 	 */
 	function initCategoryAccordion( container ) {
 		var triggers = container.querySelectorAll( '[data-dhps-mmb-category-toggle]' );
 
 		triggers.forEach( function ( trigger ) {
 			trigger.addEventListener( 'click', function () {
-				var expanded  = this.getAttribute( 'aria-expanded' ) === 'true';
-				var contentId = this.getAttribute( 'aria-controls' );
-				var content   = document.getElementById( contentId );
-
-				this.setAttribute( 'aria-expanded', expanded ? 'false' : 'true' );
-
-				if ( content ) {
-					content.setAttribute( 'aria-hidden', expanded ? 'true' : 'false' );
-				}
+				handleCategoryToggle( this, container );
 			} );
 		} );
+	}
+
+	/**
+	 * Verarbeitet einen Klick auf einen Rubrik-Toggle inkl. Lazy-Load.
+	 *
+	 * @param {HTMLButtonElement} button    Der Toggle-Button.
+	 * @param {HTMLElement}       container Der Kategorien-Container (data-dhps-mmb-categories).
+	 */
+	function handleCategoryToggle( button, container ) {
+		var category   = button.closest( '[data-dhps-mmb-category]' );
+		var contentId  = button.getAttribute( 'aria-controls' );
+		var content    = contentId ? document.getElementById( contentId ) : null;
+		var wasExpanded = button.getAttribute( 'aria-expanded' ) === 'true';
+
+		// Toggle aria-expanded/aria-hidden (bestehende Logik).
+		button.setAttribute( 'aria-expanded', wasExpanded ? 'false' : 'true' );
+
+		if ( content ) {
+			content.setAttribute( 'aria-hidden', wasExpanded ? 'true' : 'false' );
+		}
+
+		// Lazy-Load-Trigger nur beim Oeffnen + nur wenn noch nicht geladen/laedt.
+		if ( wasExpanded || ! category || ! content ) {
+			return;
+		}
+
+		var state = category.getAttribute( 'data-dhps-mmb-lazy-state' );
+		if ( 'pending' === state || 'error' === state ) {
+			loadCategorySheets( category, content, container );
+		}
+	}
+
+	/**
+	 * Laedt die Fact-Sheets einer Kategorie via AJAX nach.
+	 *
+	 * State-Machine: pending -> loading -> (loaded | error)
+	 * Idempotent: kein Doppel-Load wenn state bereits loading oder loaded.
+	 *
+	 * @param {HTMLElement} category  Das Kategorie-Wrapper-Element.
+	 * @param {HTMLElement} content   Der Inhalts-Container.
+	 * @param {HTMLElement} container Der Kategorien-Container mit Endpoint-Daten.
+	 */
+	function loadCategorySheets( category, content, container ) {
+		var categoryId = category.getAttribute( 'data-category' ) || '';
+		var ajaxUrl    = container.getAttribute( 'data-ajax-url' ) || '';
+		var nonce      = container.getAttribute( 'data-nonce' ) || '';
+		var service    = container.getAttribute( 'data-service-tag' ) || 'mmb';
+
+		if ( '' === categoryId || '' === ajaxUrl || '' === nonce ) {
+			return;
+		}
+
+		category.setAttribute( 'data-dhps-mmb-lazy-state', 'loading' );
+		content.setAttribute( 'aria-busy', 'true' );
+
+		// Skeleton wieder anzeigen, falls ein vorheriger Error-Block die Slot belegt hat.
+		ensureSkeletonVisible( content );
+
+		var url = ajaxUrl +
+			'?action=dhps_mmb_category_load' +
+			'&service=' + encodeURIComponent( service ) +
+			'&category_id=' + encodeURIComponent( categoryId ) +
+			'&_wpnonce=' + encodeURIComponent( nonce );
+
+		fetch( url, {
+			method: 'GET',
+			credentials: 'same-origin',
+			headers: { 'Accept': 'application/json' },
+		} )
+			.then( function ( response ) {
+				return response.json().catch( function () {
+					return { success: false, data: { message: 'Antwort konnte nicht gelesen werden.' } };
+				} );
+			} )
+			.then( function ( payload ) {
+				if ( payload && payload.success && payload.data && payload.data.html ) {
+					// Inhalt einsetzen (Skeleton wird durch innerHTML ersetzt).
+					content.innerHTML = payload.data.html;
+					category.setAttribute( 'data-dhps-mmb-lazy-state', 'loaded' );
+				} else {
+					var msg = ( payload && payload.data && payload.data.message )
+						? payload.data.message
+						: 'Inhalte konnten nicht geladen werden.';
+					showLoadError( content, msg );
+					category.setAttribute( 'data-dhps-mmb-lazy-state', 'error' );
+				}
+				content.removeAttribute( 'aria-busy' );
+			} )
+			.catch( function () {
+				showLoadError( content, 'Verbindungsfehler. Bitte versuchen Sie es erneut.' );
+				category.setAttribute( 'data-dhps-mmb-lazy-state', 'error' );
+				content.removeAttribute( 'aria-busy' );
+			} );
+	}
+
+	/**
+	 * Stellt sicher, dass der Skeleton-Slot sichtbar ist (entfernt Error-Blocks).
+	 */
+	function ensureSkeletonVisible( content ) {
+		var error = content.querySelector( '.dhps-mmb-error' );
+		if ( error ) {
+			error.parentNode.removeChild( error );
+		}
+	}
+
+	/**
+	 * Zeigt eine Fehlermeldung im Inhalts-Container.
+	 */
+	function showLoadError( content, message ) {
+		content.innerHTML = '<div class="dhps-mmb-error" role="alert">' +
+			escapeHtml( message ) + '</div>';
 	}
 
 	/**

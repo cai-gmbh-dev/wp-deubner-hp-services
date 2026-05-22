@@ -8,6 +8,13 @@
  * @since   0.8.0
  */
 
+/* @layer-Cascade-Definition (seit 0.14.0).
+   Reihenfolge: reset -> tokens -> components -> utilities -> overrides.
+   Theme- und Site-Overrides koennen Plugin-Styles sauber ueberschreiben. */
+@layer dhps-reset, dhps-tokens, dhps-components, dhps-utilities, dhps-overrides;
+
+@layer dhps-tokens {
+
 :root {
   /* -------------------------------------------------------
    * Deubner Verlag Primaerfarben
@@ -102,3 +109,5 @@
   --dhps-shadow-md:           0 0 8px 0 rgba(0,0,0,0.22);
   --dhps-shadow-hover:        0 0 12px 0 rgba(0,0,0,0.25);
 }
+
+} /* /@layer dhps-tokens */

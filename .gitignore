@@ -29,3 +29,10 @@ debug.log
 # Windows Artefakte
 *.bak
 *.tmp
+
+# Specialist-Agent Handover-Files (lokale Build-Artefakte, Inhalt in docs/)
+.specialist-*-handover.md
+
+# Smoke-Test-Skripte (temporaer)
+smoke-test*.php
+smoke-final*.php

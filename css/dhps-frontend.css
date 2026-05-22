@@ -12,7 +12,10 @@
 /* ==========================================================================
    Accessibility-Baseline (a11y) - seit 0.13.1
    Plugin-eigene Definitionen, unabhaengig von WP-Core-Themes.
+   In @layer dhps-reset gewrappt seit 0.14.0 (Cascade-Foundation).
    ========================================================================== */
+
+@layer dhps-reset {
 
 /* Visually hidden (Standard-WP-Pattern, hier plugin-eigen damit es
    unabhaengig vom aktiven Theme funktioniert). */
@@ -74,6 +77,17 @@
 		scroll-behavior: auto !important;
 	}
 }
+
+/* Alpine.js [x-cloak]-Guard (seit 0.14.0): verhindert FOUC bis Alpine
+   initialisiert hat. NICHT auf .dhps-service gescoped, da x-cloak global
+   wirkt - safe weil reines Hide-Pattern. */
+[x-cloak] {
+	display: none !important;
+}
+
+} /* /@layer dhps-reset */
+
+@layer dhps-components {
 
 /* ==========================================================================
    Basis-Container
@@ -2509,3 +2523,49 @@
 		padding-left: 22px;
 	}
 }
+
+/* ============================================================
+   MMB Lazy-Akkordeon (seit 0.14.0)
+   State-Machine: pending -> loading -> (loaded | error)
+   Skeleton ist nur waehrend "loading" sichtbar; "pending" + "loaded"
+   verbergen die Skeleton-Markup, weil entweder noch nichts geladen wird
+   oder der Inhalt bereits eingesetzt ist.
+   ============================================================ */
+.dhps-mmb-category--lazy[data-dhps-mmb-lazy-state="pending"] .dhps-skeleton {
+	display: none;
+}
+
+.dhps-mmb-category--lazy[data-dhps-mmb-lazy-state="loading"] .dhps-skeleton {
+	display: block;
+}
+
+.dhps-mmb-category--lazy[data-dhps-mmb-lazy-state="loaded"] .dhps-skeleton {
+	display: none;
+}
+
+/* Im pending-Zustand keine Fremd-Inhalte ausser Skeleton anzeigen
+   (defensiv, falls Theme-Overrides Items vorrendern). */
+.dhps-mmb-category--lazy[data-dhps-mmb-lazy-state="pending"] .dhps-mmb-category__content > *:not(.dhps-skeleton) {
+	display: none;
+}
+
+/* Fehler-Anzeige bei AJAX-Load-Failure. */
+.dhps-mmb-error {
+	padding: var(--dhps-space-md, 16px);
+	background: var(--dhps-color-danger-light, #fbebed);
+	color: var(--dhps-color-danger, #C60202);
+	border-left: 4px solid var(--dhps-color-danger, #C60202);
+	border-radius: var(--dhps-radius-sm, 4px);
+	font-size: 0.95em;
+}
+
+/* noscript-Fallback-Sektion (volle Liste fuer Crawler ohne JS). */
+.dhps-mmb-categories--noscript {
+	margin-top: var(--dhps-space-md, 16px);
+}
+
+.dhps-mmb-categories--noscript .dhps-mmb-category__content {
+	display: block;
+}
+
+} /* /@layer dhps-components */

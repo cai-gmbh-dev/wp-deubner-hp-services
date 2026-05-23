@@ -247,6 +247,22 @@
 	line-height: 1.5;
 }
 
+/* Container-Query-Support fuer enge Elementor-Spalten (seit 0.14.2).
+   Faellt bei Browsern ohne Support auf den bestehenden @media-Breakpoint (768px) zurueck. */
+.dhps-tax-dates,
+.dhps-termine {
+	container-type: inline-size;
+	container-name: dhps-termine;
+}
+
+@container dhps-termine (max-width: 500px) {
+	.dhps-tax-dates__grid,
+	.dhps-termine__grid,
+	.dhps-termine__list {
+		grid-template-columns: 1fr;
+	}
+}
+
 /* ==========================================================================
    MIO: Trennlinie
    ========================================================================== */
@@ -1873,6 +1889,14 @@
 
 .dhps-service--lp.dhps-tp-style--shadow .dhps-tp-card:hover {
 	box-shadow: 0 0 12px 0 rgba(0, 84, 166, 0.25);
+}
+
+/* LXMIO: Service-Wrapper-Token-Switch (Recht-Blau), seit 0.14.2.
+   Wirkt auf alle Plugin-Elemente die `--dhps-color-primary` nutzen,
+   inkl. der JS-rendered Articles in dhps-mio.js. */
+.dhps-service--lxmio {
+	--dhps-color-primary: var(--dhps-color-recht, #0054A6);
+	--dhps-color-primary-hover: var(--dhps-color-recht-hover, #003A73);
 }
 
 /* LXMIO Recht-Branding: Blau statt Steuern-Gruen */

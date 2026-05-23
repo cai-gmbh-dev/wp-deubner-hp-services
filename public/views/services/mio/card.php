@@ -66,44 +66,8 @@ wp_enqueue_script( 'dhps-mio-js' );
 	<hr class="dhps-divider">
 	<?php endif; ?>
 
-	<section class="dhps-search-bar" aria-label="<?php echo esc_attr( 'Suche und Filter' ); ?>">
-		<form class="dhps-search-bar__form" role="search" data-dhps-search>
-			<?php if ( ! empty( $search_config['target_groups'] ) ) : ?>
-			<div class="dhps-search-bar__field">
-				<label class="dhps-search-bar__label screen-reader-text" for="dhps-rubriken-<?php echo esc_attr( $service_tag ); ?>">
-					<?php echo esc_html( 'Zielgruppe' ); ?>
-				</label>
-				<select class="dhps-search-bar__select"
-						id="dhps-rubriken-<?php echo esc_attr( $service_tag ); ?>"
-						name="rubriken"
-						data-dhps-rubriken>
-					<?php foreach ( $search_config['target_groups'] as $group ) : ?>
-					<option value="<?php echo esc_attr( $group ); ?>"><?php echo esc_html( $group ); ?></option>
-					<?php endforeach; ?>
-				</select>
-			</div>
-			<?php endif; ?>
-
-			<div class="dhps-search-bar__field dhps-search-bar__field--grow">
-				<label class="dhps-search-bar__label screen-reader-text" for="dhps-suchbegriff-<?php echo esc_attr( $service_tag ); ?>">
-					<?php echo esc_html( 'Suchbegriff' ); ?>
-				</label>
-				<input type="search"
-					   class="dhps-search-bar__input"
-					   id="dhps-suchbegriff-<?php echo esc_attr( $service_tag ); ?>"
-					   name="suchbegriff"
-					   placeholder="<?php echo esc_attr( $search_config['search_placeholder'] ?? 'Suchbegriff' ); ?>"
-					   data-dhps-search-input>
-			</div>
-
-			<button type="submit" class="dhps-search-bar__button" aria-label="<?php echo esc_attr( 'Suchen' ); ?>" data-dhps-search-submit>
-				<svg class="dhps-search-bar__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-					<circle cx="11" cy="11" r="8"/>
-					<path d="m21 21-4.35-4.35"/>
-				</svg>
-			</button>
-		</form>
-	</section>
+	<!-- Such- und Filterleiste (Partial seit 0.14.2). -->
+	<?php include __DIR__ . '/partials/search-form.php'; ?>
 
 	<!-- Themen-Filter (dynamisch per JS befuellt nach AJAX-Laden) -->
 	<nav class="dhps-filter-bar" data-dhps-mio-filter-bar
@@ -123,6 +87,13 @@ wp_enqueue_script( 'dhps-mio-js' );
 			 data-variante="<?php echo esc_attr( $ajax_params['variante'] ?? 'KATEGORIEN' ); ?>"
 			 data-anzahl="<?php echo esc_attr( $ajax_params['anzahl'] ?? '4' ); ?>"
 			 data-teasermodus="<?php echo esc_attr( $ajax_params['teasermodus'] ?? '0' ); ?>">
+		<!-- Skeleton-Slot fuer Load-More und Live-Search (seit 0.14.2). Wird von dhps-mio.js getoggled. -->
+		<div class="dhps-mio-skeleton-slot" data-dhps-mio-skeleton hidden>
+			<?php echo dhps_component( 'skeleton-loader', array(
+				'type'  => 'card',
+				'count' => 3,
+			) ); ?>
+		</div>
 		<div class="dhps-news__loading" data-dhps-loading>
 			<span class="dhps-news__spinner" aria-hidden="true"></span>
 			<span class="screen-reader-text"><?php echo esc_html( 'Nachrichten werden geladen...' ); ?></span>

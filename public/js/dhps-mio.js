@@ -88,6 +88,32 @@
 			} );
 		}
 
+		// Live-Search mit Debounce (seit 0.14.2). Triggert denselben loadNews-Call
+		// wie der Submit-Handler. Min-Chars konfigurierbar via data-dhps-live-search-min.
+		// Idempotenz-Guard (QA-M1, 0.14.2): Doppel-Binding bei erneutem init verhindern.
+		if ( searchInput && searchInput.dataset.dhpsLiveSearchBound !== '1' ) {
+			searchInput.dataset.dhpsLiveSearchBound = '1';
+			var debounceTimer = null;
+			var minCharsAttr  = parseInt( searchInput.getAttribute( 'data-dhps-live-search-min' ) || '3', 10 );
+			var minChars      = isNaN( minCharsAttr ) ? 3 : minCharsAttr;
+
+			searchInput.addEventListener( 'input', function () {
+				var self = this;
+				if ( debounceTimer ) {
+					clearTimeout( debounceTimer );
+				}
+				debounceTimer = setTimeout( function () {
+					var value = self.value || '';
+					// Min-Chars-Schwelle: bei leerem Feld zuruecksetzen, sonst nur ab minChars.
+					if ( value.length > 0 && value.length < minChars ) {
+						return;
+					}
+					state.search = value;
+					loadNews( container, config, state );
+				}, 300 );
+			} );
+		}
+
 		// Bei Dropdown-Aenderung sofort laden.
 		if ( rubrikenSel ) {
 			rubrikenSel.addEventListener( 'change', function () {
@@ -96,11 +122,28 @@
 			} );
 		}
 
+		// Skeleton-Toggle-Helper (seit 0.14.2): zeigt/versteckt das im Template
+		// eingebettete data-dhps-mio-skeleton Element, falls vorhanden.
+		function setMioSkeleton( visible ) {
+			var skeleton = container.querySelector( '[data-dhps-mio-skeleton]' );
+			if ( ! skeleton ) {
+				return;
+			}
+			if ( visible ) {
+				skeleton.removeAttribute( 'hidden' );
+			} else {
+				skeleton.setAttribute( 'hidden', '' );
+			}
+		}
+
 		// "Mehr laden"-Trigger (rein client-seitig, kein AJAX).
 		function showMore() {
 			if ( ! state.hasMore || ! state.fullData ) {
 				return;
 			}
+
+			// Skeleton kurz anzeigen fuer UX-Feedback (seit 0.14.2).
+			setMioSkeleton( true );
 
 			var filteredData = filterDataByTopic( state.fullData, state.topicFilter );
 			var slice = sliceArticles( filteredData, state.displayCount, config.anzahl );
@@ -109,6 +152,7 @@
 			if ( sliceCount === 0 ) {
 				state.hasMore = false;
 				updateLoadMoreVisibility( container, state );
+				setMioSkeleton( false );
 				return;
 			}
 
@@ -125,6 +169,8 @@
 
 			getOrCreateLoadMore( container );
 			updateLoadMoreVisibility( container, state );
+
+			setMioSkeleton( false );
 
 			if ( state._io ) {
 				state._io.reobserve();

@@ -21,6 +21,9 @@
  *   bool        $collapsible default false; wenn true: Alpine-Toggle fuer body_html
  *   string      $class       Zusaetzliche Root-Klassen       default ''
  *   string      $service     Optionaler Service-Slug (Branding-Hook) default ''
+ *   array       $data_attrs  Zusaetzliche data-*-Attribute am Root, [key => value]
+ *                            Keys werden via sanitize_key gefiltert, Values via esc_attr.
+ *                            Beispiel: ['video-slug' => 'abc'] -> data-video-slug="abc"
  *
  * Aufruf-Beispiel:
  *
@@ -63,6 +66,7 @@ $actions     = isset( $actions ) && is_array( $actions ) ? $actions : array();
 $collapsible = isset( $collapsible ) ? (bool) $collapsible : false;
 $class       = isset( $class ) && is_string( $class ) ? $class : '';
 $service     = isset( $service ) && is_string( $service ) ? sanitize_html_class( $service ) : '';
+$data_attrs  = isset( $data_attrs ) && is_array( $data_attrs ) ? $data_attrs : array();
 
 // Pflichtfeld pruefen.
 if ( '' === $title ) {
@@ -109,8 +113,19 @@ $alpine_attrs = '';
 if ( $use_collapsible ) {
 	$alpine_attrs = ' x-data="dhpsContentCard()" x-cloak';
 }
+
+// Optionale data-* Attribute (z.B. fuer TP-Video-Player-Selector).
+// Keys per sanitize_key, Values per esc_attr - keine HTML-Injection moeglich.
+$data_attr_str = '';
+foreach ( $data_attrs as $key => $value ) {
+	$safe_key = sanitize_key( (string) $key );
+	if ( '' === $safe_key ) {
+		continue;
+	}
+	$data_attr_str .= ' data-' . $safe_key . '="' . esc_attr( (string) $value ) . '"';
+}
 ?>
-<article class="<?php echo esc_attr( $root_classes ); ?>"<?php echo $alpine_attrs; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $alpine_attrs ist konstante Literal-Verkettung (siehe oben), keine User-Daten interpolierbar. ?>>
+<article class="<?php echo esc_attr( $root_classes ); ?>"<?php echo $alpine_attrs . $data_attr_str; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $alpine_attrs konstante Literale, $data_attr_str pre-escaped via sanitize_key + esc_attr (siehe oben). ?>>
 
 	<?php if ( '' !== $media_url ) : ?>
 		<div class="dhps-content-card__media">

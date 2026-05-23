@@ -1,6 +1,11 @@
 <?php
 /**
- * MAES Videos Template - Nutzt TP-Infrastruktur.
+ * MAES Videos Template (Default-Layout) - v0.14.1 Component-System.
+ *
+ * Nutzt ContentList + ContentCard (type='video', service='maes') statt
+ * dupliziertem TP-Card-Markup. Behaelt den `.dhps-service--tp`-Wrapper
+ * fuer Backward-Compat mit dhps-tp.js (Event-Delegation auf
+ * [data-video-slug], Lazy-Load und Filter via `.dhps-tp-card`-Klasse).
  *
  * Verfuegbare Variablen:
  *   $videos       - Array der Video-Daten aus DHPS_MAES_Parser.
@@ -13,66 +18,121 @@
  *
  * @package Deubner Homepage-Service
  * @since   0.10.1
+ * @since   0.14.1 Migration auf Component-System.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$lazy_count   = $lazy_count ?? 0;
-$lazy_mode    = $lazy_mode ?? 'manual';
-$style_preset = $style_preset ?? 'default';
-$video_mode   = $video_mode ?? 'inline';
+$lazy_count   = isset( $lazy_count ) ? (int) $lazy_count : 0;
+$lazy_mode    = isset( $lazy_mode ) && is_string( $lazy_mode ) ? $lazy_mode : 'manual';
+$style_preset = isset( $style_preset ) && is_string( $style_preset ) ? $style_preset : 'default';
+$video_mode   = isset( $video_mode ) && is_string( $video_mode ) ? $video_mode : 'inline';
+$columns      = isset( $columns ) ? (int) $columns : 2;
+$custom_class = isset( $custom_class ) && is_string( $custom_class ) ? $custom_class : '';
+$videos       = isset( $videos ) && is_array( $videos ) ? $videos : array();
 
+// TP-Player-Skript wird fuer die Click-Delegation auf [data-video-slug] benoetigt.
 wp_enqueue_script( 'dhps-tp-js' );
 
-$video_index = 0;
-?>
-<div class="dhps-service dhps-service--tp dhps-service--maes-videos dhps-tp-style--<?php echo esc_attr( $style_preset ); ?><?php echo esc_attr( $custom_class ); ?>"
-	 data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
-	 data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_tp_nonce' ) ); ?>"
-	 data-video-mode="<?php echo esc_attr( $video_mode ); ?>"
-	 data-lazy-count="<?php echo esc_attr( $lazy_count ); ?>"
-	 data-lazy-mode="<?php echo esc_attr( $lazy_mode ); ?>">
+// Eindeutige Listen-ID fuer ARIA / Alpine-Scope.
+$list_id = 'maes-videos-' . wp_unique_id();
 
-	<div class="dhps-tp-grid dhps-tp-grid--<?php echo esc_attr( $columns ); ?>col">
-		<?php foreach ( $videos as $video ) :
-			$is_hidden = ( $lazy_count > 0 && $video_index >= $lazy_count );
-		?>
-		<article class="dhps-tp-card<?php echo $is_hidden ? ' dhps-tp-card--lazy-hidden' : ''; ?>"
-				 <?php echo $is_hidden ? 'hidden' : ''; ?>
-				 data-video-index="<?php echo esc_attr( $video_index ); ?>">
-			<div class="dhps-tp-card__poster" role="button" tabindex="0"
-				 aria-label="<?php echo esc_attr( 'Video: ' . $video['title'] ); ?>"
-				 data-video-slug="<?php echo esc_attr( $video['video_slug'] ); ?>"
-				 data-poster-url="<?php echo esc_url( $video['poster_url'] ); ?>"
-				 data-v-modus="0">
-				<?php if ( ! empty( $video['poster_url'] ) ) : ?>
-				<img src="<?php echo esc_url( $video['poster_url'] ); ?>"
-					 alt="<?php echo esc_attr( $video['title'] ); ?>"
-					 class="dhps-tp-card__img" loading="lazy" width="500" height="291">
-				<?php endif; ?>
-				<span class="dhps-tp-card__play-btn" aria-hidden="true" style="color: var(--dhps-color-medizin)">
-					<svg width="48" height="48" viewBox="0 0 64 64">
-						<circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.9)"/>
-						<polygon points="26,20 26,44 46,32" fill="currentColor"/>
-					</svg>
-				</span>
-			</div>
-			<div class="dhps-tp-card__body">
-				<h4 class="dhps-tp-card__title"><?php echo esc_html( $video['title'] ); ?></h4>
-				<?php if ( ! empty( $video['description'] ) ) : ?>
-				<p class="dhps-tp-card__teaser"><?php echo esc_html( mb_strimwidth( $video['description'], 0, 120, '...' ) ); ?></p>
-				<?php endif; ?>
-			</div>
-		</article>
-		<?php $video_index++; endforeach; ?>
-	</div>
+// Video-Items in ContentCard-Prop-Shape transformieren.
+$video_index = 0;
+$items       = array();
+foreach ( $videos as $video ) {
+	if ( ! is_array( $video ) ) {
+		continue;
+	}
+
+	$title       = isset( $video['title'] ) ? (string) $video['title'] : '';
+	$description = isset( $video['description'] ) ? (string) $video['description'] : '';
+	$slug        = isset( $video['video_slug'] ) ? (string) $video['video_slug'] : '';
+	$poster      = isset( $video['poster_url'] ) ? (string) $video['poster_url'] : '';
+
+	if ( '' === $slug ) {
+		continue;
+	}
+
+	// Lazy-Hidden-Status: erste $lazy_count Karten sichtbar, Rest hidden
+	// (TP-JS uebernimmt das Aufblenden via Load-More-Button).
+	$is_hidden = ( $lazy_count > 0 && $video_index >= $lazy_count );
+
+	// Zusatz-Klassen so gewaehlt, dass dhps-tp.js die Karten findet:
+	// - `dhps-tp-card`           : Filter- und Lazy-Selektor in dhps-tp.js
+	// - `dhps-tp-card--lazy-hidden` : Lazy-Load-Marker fuer initial versteckte Karten
+	$extra_class  = 'dhps-tp-card';
+	$extra_class .= $is_hidden ? ' dhps-tp-card--lazy-hidden' : '';
+
+	$items[] = array(
+		'type'       => 'video',
+		'title'      => $title,
+		// Teaser wird per CSS line-clamp gekuerzt (keine PHP-Truncation).
+		'teaser'     => $description,
+		'media_url'  => $poster,
+		'media_alt'  => $title,
+		'service'    => 'maes',
+		'class'      => $extra_class,
+		'actions'    => array(
+			array(
+				'label'   => __( 'Video abspielen', 'wp-deubner-hp-services' ),
+				'href'    => '#play',
+				'icon'    => 'play',
+				'primary' => true,
+			),
+		),
+		// Data-Attribute fuer den TP-Player (Event-Delegation auf [data-video-slug]).
+		'data_attrs' => array(
+			'video-slug'  => $slug,
+			'poster-url'  => $poster,
+			'v-modus'     => '0',
+			'video-index' => (string) $video_index,
+		),
+	);
+
+	++$video_index;
+}
+
+// Empty-State: nichts zu rendern -> ContentList uebernimmt mit empty_state-Prop.
+$wrapper_classes  = 'dhps-service dhps-service--tp dhps-service--maes-videos';
+$wrapper_classes .= ' dhps-tp-style--' . sanitize_html_class( $style_preset );
+$wrapper_classes .= ' dhps-layout--default';
+if ( '' !== $custom_class ) {
+	$wrapper_classes .= ' ' . $custom_class;
+}
+?>
+<div class="<?php echo esc_attr( $wrapper_classes ); ?>"
+	data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+	data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_tp_nonce' ) ); ?>"
+	data-video-mode="<?php echo esc_attr( $video_mode ); ?>"
+	data-service="maes"
+	data-lazy-count="<?php echo esc_attr( (string) $lazy_count ); ?>"
+	data-lazy-mode="<?php echo esc_attr( $lazy_mode ); ?>">
+
+	<?php
+	echo dhps_component( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Component liefert escapten HTML.
+		'content-list',
+		array(
+			'id'          => $list_id,
+			'layout'      => 'grid',
+			'columns'     => $columns,
+			'items'       => $items,
+			'item_type'   => 'video',
+			'class'       => 'dhps-content-list--maes-videos',
+			'empty_state' => array(
+				'icon'  => 'video',
+				'title' => __( 'Keine Video-Tipps verfuegbar', 'wp-deubner-hp-services' ),
+			),
+		)
+	);
+	?>
 
 	<?php if ( $lazy_count > 0 && $video_index > $lazy_count ) : ?>
-	<button class="dhps-tp-load-more" type="button">
-		<?php echo esc_html( 'Weitere Videos laden' ); ?>
-	</button>
+		<button class="dhps-tp-load-more" type="button">
+			<?php esc_html_e( 'Weitere Videos laden', 'wp-deubner-hp-services' ); ?>
+		</button>
 	<?php endif; ?>
 
 </div>

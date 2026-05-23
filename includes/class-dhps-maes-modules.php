@@ -194,7 +194,10 @@ class DHPS_MAES_Modules {
 			return '';
 		}
 
-		wp_enqueue_script( 'dhps-mmb-js' );
+		// Seit v0.14.1: Die modernisierten Merkblaetter-Templates nutzen das
+		// Component-System (ContentList + ContentCard mit type=document) und
+		// brauchen kein eigenes MMB-Akkordeon-JS mehr. Spart ~10 KB JS bei
+		// [maes_merkblaetter]-only-Seiten.
 
 		ob_start();
 		include $template;

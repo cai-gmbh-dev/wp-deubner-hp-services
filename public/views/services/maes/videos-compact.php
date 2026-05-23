@@ -1,8 +1,9 @@
 <?php
 /**
- * MAES Videos Compact Template - Nutzt TP-Infrastruktur.
+ * MAES Videos Compact Template - v0.14.1 Component-System.
  *
- * Kompakte Listen-Variante: kleine Thumbnails mit Titel nebeneinander.
+ * Kompakte Listen-Variante: ContentList layout='list', kleine Thumbnails,
+ * weniger Padding, kein Teaser-Text, nur Play-Action.
  *
  * Verfuegbare Variablen:
  *   $videos       - Array der Video-Daten aus DHPS_MAES_Parser.
@@ -11,42 +12,88 @@
  *
  * @package Deubner Homepage-Service
  * @since   0.10.1
+ * @since   0.14.1 Migration auf Component-System.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$video_mode = $video_mode ?? 'inline';
-?>
-<div class="dhps-service dhps-service--tp dhps-service--maes-videos dhps-tp-compact<?php echo esc_attr( $custom_class ); ?>"
-	 data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
-	 data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_tp_nonce' ) ); ?>"
-	 data-video-mode="<?php echo esc_attr( $video_mode ); ?>">
+$video_mode   = isset( $video_mode ) && is_string( $video_mode ) ? $video_mode : 'inline';
+$custom_class = isset( $custom_class ) && is_string( $custom_class ) ? $custom_class : '';
+$videos       = isset( $videos ) && is_array( $videos ) ? $videos : array();
 
-	<ul class="dhps-tp-compact__list">
-		<?php foreach ( $videos as $video ) : ?>
-		<li class="dhps-tp-compact__item">
-			<div class="dhps-tp-compact__poster" role="button" tabindex="0"
-				 aria-label="<?php echo esc_attr( 'Video: ' . $video['title'] ); ?>"
-				 data-video-slug="<?php echo esc_attr( $video['video_slug'] ); ?>"
-				 data-poster-url="<?php echo esc_url( $video['poster_url'] ); ?>"
-				 data-v-modus="0">
-				<?php if ( ! empty( $video['poster_url'] ) ) : ?>
-				<img src="<?php echo esc_url( $video['poster_url'] ); ?>"
-					 alt="<?php echo esc_attr( $video['title'] ); ?>"
-					 class="dhps-tp-compact__thumb" loading="lazy" width="80" height="47">
-				<?php endif; ?>
-				<span class="dhps-tp-card__play-btn dhps-tp-compact__play-btn" aria-hidden="true" style="color: var(--dhps-color-medizin)">
-					<svg width="24" height="24" viewBox="0 0 64 64">
-						<circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.9)"/>
-						<polygon points="26,20 26,44 46,32" fill="currentColor"/>
-					</svg>
-				</span>
-			</div>
-			<span class="dhps-tp-compact__title"><?php echo esc_html( $video['title'] ); ?></span>
-		</li>
-		<?php endforeach; ?>
-	</ul>
+wp_enqueue_script( 'dhps-tp-js' );
+
+$list_id = 'maes-videos-compact-' . wp_unique_id();
+
+$items = array();
+foreach ( $videos as $video ) {
+	if ( ! is_array( $video ) ) {
+		continue;
+	}
+
+	$title  = isset( $video['title'] ) ? (string) $video['title'] : '';
+	$slug   = isset( $video['video_slug'] ) ? (string) $video['video_slug'] : '';
+	$poster = isset( $video['poster_url'] ) ? (string) $video['poster_url'] : '';
+
+	if ( '' === $slug ) {
+		continue;
+	}
+
+	$items[] = array(
+		'type'       => 'video',
+		'title'      => $title,
+		// Kein Teaser in Compact-Variante.
+		'media_url'  => $poster,
+		'media_alt'  => $title,
+		'service'    => 'maes',
+		// `dhps-tp-card`-Klasse fuer TP-JS-Kompatibilitaet (Filter/Lazy).
+		'class'      => 'dhps-tp-card dhps-content-card--compact',
+		'actions'    => array(
+			array(
+				'label'   => __( 'Video abspielen', 'wp-deubner-hp-services' ),
+				'href'    => '#play',
+				'icon'    => 'play',
+				'primary' => true,
+			),
+		),
+		'data_attrs' => array(
+			'video-slug' => $slug,
+			'poster-url' => $poster,
+			'v-modus'    => '0',
+		),
+	);
+}
+
+$wrapper_classes  = 'dhps-service dhps-service--tp dhps-service--maes-videos';
+$wrapper_classes .= ' dhps-tp-compact dhps-layout--compact';
+if ( '' !== $custom_class ) {
+	$wrapper_classes .= ' ' . $custom_class;
+}
+?>
+<div class="<?php echo esc_attr( $wrapper_classes ); ?>"
+	data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+	data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_tp_nonce' ) ); ?>"
+	data-video-mode="<?php echo esc_attr( $video_mode ); ?>"
+	data-service="maes">
+
+	<?php
+	echo dhps_component( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Component liefert escapten HTML.
+		'content-list',
+		array(
+			'id'          => $list_id,
+			'layout'      => 'list',
+			'columns'     => 1,
+			'items'       => $items,
+			'item_type'   => 'video',
+			'class'       => 'dhps-content-list--maes-videos dhps-content-list--compact',
+			'empty_state' => array(
+				'icon'  => 'video',
+				'title' => __( 'Keine Video-Tipps verfuegbar', 'wp-deubner-hp-services' ),
+			),
+		)
+	);
+	?>
 
 </div>

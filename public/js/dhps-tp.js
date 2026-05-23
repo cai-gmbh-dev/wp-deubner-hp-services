@@ -135,10 +135,12 @@
 					// Poster ausblenden.
 					var posterEl = playerContainer.querySelector( '.dhps-tp-video__poster' ) ||
 						playerContainer.querySelector( '.dhps-tp-card__poster' ) ||
+						playerContainer.querySelector( '.dhps-content-card__media' ) ||
 						poster;
 
 					if ( posterEl.classList.contains( 'dhps-tp-video__poster' ) ||
-						posterEl.classList.contains( 'dhps-tp-card__poster' ) ) {
+						posterEl.classList.contains( 'dhps-tp-card__poster' ) ||
+						posterEl.classList.contains( 'dhps-content-card__media' ) ) {
 						posterEl.style.display = 'none';
 					}
 

@@ -920,4 +920,33 @@
 		justify-content: center;
 	}
 
+	/* ============================================================
+	   Service-Branding-Hooks (seit 0.14.1)
+	   ContentCard kann via Prop `service` einen Branding-Modifier
+	   bekommen: .dhps-content-card--service-{slug}. Die folgenden
+	   Selektoren lenken Akzent-Farben pro Service-Familie.
+	   ============================================================ */
+
+	.dhps-content-card--service-maes .dhps-content-card__play-overlay,
+	.dhps-content-card--service-maes .dhps-content-card__action--primary {
+		color: var(--dhps-color-medizin);
+	}
+	.dhps-content-card--service-maes .dhps-content-card__action--primary:hover {
+		color: var(--dhps-color-medizin);
+		filter: brightness(0.85);
+	}
+	.dhps-content-card--service-maes .dhps-content-card__badge--top {
+		background: var(--dhps-color-medizin-light);
+		color: var(--dhps-color-medizin);
+	}
+
+	.dhps-content-card--service-lxmio .dhps-content-card__action--primary,
+	.dhps-content-card--service-lp .dhps-content-card__action--primary {
+		color: var(--dhps-color-recht);
+	}
+	.dhps-content-card--service-lxmio .dhps-content-card__action--primary:hover,
+	.dhps-content-card--service-lp .dhps-content-card__action--primary:hover {
+		color: var(--dhps-color-recht-hover);
+	}
+
 } /* /@layer dhps-components */

@@ -10,15 +10,20 @@
  * Keine externe Abhaengigkeit (kein jQuery).
  * OTA-Kundennummer wird NICHT im Client-Code verwendet.
  *
+ * Selektor-Reichweite: laeuft auf .dhps-service--tp UND .dhps-service--lp
+ * (LP erbt seit v0.14.3 das TP-Layout via Template-Fallback und braucht
+ * dieselbe Click-Delegation auf [data-video-slug]).
+ *
  * @package Deubner Homepage-Service
  * @since   0.9.1
+ * @version 0.14.3
  */
 
 ( function () {
 	'use strict';
 
 	function init() {
-		document.querySelectorAll( '.dhps-service--tp' ).forEach( function ( container ) {
+		document.querySelectorAll( '.dhps-service--tp, .dhps-service--lp' ).forEach( function ( container ) {
 			var config = {
 				ajaxUrl: container.getAttribute( 'data-ajax-url' ),
 				nonce:   container.getAttribute( 'data-nonce' ),
@@ -51,7 +56,7 @@
 				poster;
 
 			// Bereits geladen? (Nur im inline-Modus blockieren, nicht im Modal-Modus.)
-			var svcContainer = poster.closest( '.dhps-service--tp' );
+			var svcContainer = poster.closest( '.dhps-service--tp, .dhps-service--lp' );
 			var isModal = svcContainer && ( svcContainer.getAttribute( 'data-video-mode' ) || '' ).trim() === 'modal';
 
 			if ( ! isModal && playerContainer.querySelector( 'iframe' ) ) {
@@ -94,7 +99,7 @@
 		// Pruefen ob Modal-Modus aktiv ist.
 		// NUR wenn explizit data-video-mode="modal" gesetzt (Elementor-Control).
 		// Suche den naechsten Service-Container (nicht document-weit).
-		var serviceContainer = poster.closest( '.dhps-service--tp' );
+		var serviceContainer = poster.closest( '.dhps-service--tp, .dhps-service--lp' );
 		var videoMode = serviceContainer ? ( serviceContainer.getAttribute( 'data-video-mode' ) || '' ).trim() : '';
 		var useModal  = ( videoMode === 'modal' );
 

@@ -1,78 +1,117 @@
 <?php
 /**
- * Service-Template: TPT Card-Layout (Card-Wrapper mit Schatten).
+ * Service-Template: TPT Card-Layout (Card-Wrapper mit Schatten) - v0.14.3.
  *
- * Wie Standard, aber in einer dhps-card-Box mit Box-Shadow.
+ * Wie Standard, aber in einer dhps-card-Box mit Box-Shadow. Migration auf
+ * Component-System: ContentCard (type='video', service='tp') eingebettet in
+ * `<div class="dhps-card">`. EmptyState bei fehlendem Video.
+ *
+ * Tech-Debt (laut Audit, Plan v0.14.3 Sektion 6 / TPT-#3):
+ *   `get_option('dhps_tpt_ues')` und `get_option('dhps_tpt_teasertext')` werden
+ *   weiterhin direkt im Template gelesen. Folge-Ticket fuer Verschiebung in
+ *   Parser/Modules-Layer.
  *
  * @package    Deubner Homepage-Service
  * @subpackage Public/Views/Services/TPT
  * @since      0.12.0
+ * @since      0.14.3 Migration auf Component-System (ContentCard + EmptyState).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$video = $data['video'] ?? null;
-
-if ( null === $video || empty( $video['video_slug'] ) ) {
-	return;
-}
-
-$ueberschrift = get_option( 'dhps_tpt_ues', '' );
-$teasertext   = get_option( 'dhps_tpt_teasertext', '' );
+$video        = isset( $data['video'] ) && is_array( $data['video'] ) ? $data['video'] : null;
+$layout_class = isset( $layout_class ) && is_string( $layout_class ) ? $layout_class : 'dhps-layout--card';
+$custom_class = isset( $custom_class ) && is_string( $custom_class ) ? $custom_class : '';
 
 wp_enqueue_script( 'dhps-tp-js' );
+
+$wrapper_classes  = 'dhps-service dhps-service--tp dhps-service--tpt ';
+$wrapper_classes .= sanitize_html_class( $layout_class );
+if ( '' !== $custom_class ) {
+	$wrapper_classes .= ' ' . $custom_class;
+}
 ?>
-<div class="dhps-service dhps-service--tp dhps-service--tpt <?php echo esc_attr( $layout_class . $custom_class ); ?>"
-	 data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
-	 data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_tp_nonce' ) ); ?>"
-	 data-video-mode="inline"
-	 data-service="taxplain">
+<div class="<?php echo esc_attr( $wrapper_classes ); ?>"
+	data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+	data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_tp_nonce' ) ); ?>"
+	data-video-mode="inline"
+	data-service="taxplain">
+
+	<?php
+	if ( null === $video || empty( $video['video_slug'] ) ) {
+		echo dhps_component( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Component liefert escapten HTML.
+			'empty-state',
+			array(
+				'icon'  => 'video',
+				'title' => __( 'Kein Teaser-Video verfuegbar', 'wp-deubner-hp-services' ),
+				'hint'  => __( 'Bitte spaeter erneut pruefen oder Lizenz/Auth-Daten kontrollieren.', 'wp-deubner-hp-services' ),
+			)
+		);
+		?>
+	</div>
+		<?php
+		return;
+	}
+
+	$ueberschrift = (string) get_option( 'dhps_tpt_ues', '' );
+	$teasertext   = (string) get_option( 'dhps_tpt_teasertext', '' );
+
+	$card_title  = isset( $video['titel'] ) ? (string) $video['titel'] : '';
+	$card_slug   = (string) $video['video_slug'];
+	$card_poster = isset( $video['poster_url'] ) ? (string) $video['poster_url'] : '';
+	$card_vmodus = isset( $video['v_modus'] ) ? (string) $video['v_modus'] : '0';
+
+	$card_teaser = '';
+	if ( '' !== $teasertext ) {
+		$card_teaser = $teasertext;
+	} elseif ( ! empty( $video['teaser'] ) ) {
+		$card_teaser = (string) $video['teaser'];
+	}
+
+	$card_meta = array();
+	if ( ! empty( $video['datum'] ) ) {
+		$card_meta[] = array(
+			'icon' => 'calendar',
+			'text' => DHPS_TP_Parser::format_datum( (string) $video['datum'] ),
+		);
+	}
+	?>
 
 	<div class="dhps-card">
-		<article class="dhps-tpt-card dhps-tpt-card--boxed">
-
-			<?php if ( ! empty( $ueberschrift ) ) : ?>
+		<?php if ( '' !== $ueberschrift ) : ?>
 			<h3 class="dhps-tpt-card__heading"><?php echo esc_html( $ueberschrift ); ?></h3>
-			<?php endif; ?>
+		<?php endif; ?>
 
-			<div class="dhps-tp-card__poster" role="button" tabindex="0"
-				 aria-label="<?php echo esc_attr( 'Video abspielen: ' . $video['titel'] ); ?>"
-				 data-video-slug="<?php echo esc_attr( $video['video_slug'] ); ?>"
-				 data-poster-url="<?php echo esc_url( $video['poster_url'] ); ?>"
-				 data-v-modus="<?php echo esc_attr( $video['v_modus'] ?? '0' ); ?>">
-				<?php if ( ! empty( $video['poster_url'] ) ) : ?>
-				<img src="<?php echo esc_url( $video['poster_url'] ); ?>"
-					 alt="<?php echo esc_attr( $video['titel'] ); ?>"
-					 class="dhps-tp-card__img"
-					 loading="lazy" width="500" height="291">
-				<?php endif; ?>
-				<span class="dhps-tp-card__play-btn" aria-hidden="true">
-					<svg width="56" height="56" viewBox="0 0 64 64">
-						<circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.9)"/>
-						<polygon points="26,20 26,44 46,32" fill="currentColor"/>
-					</svg>
-				</span>
-			</div>
-
-			<div class="dhps-tpt-card__body">
-				<h4 class="dhps-tpt-card__title"><?php echo esc_html( $video['titel'] ); ?></h4>
-
-				<?php if ( ! empty( $teasertext ) ) : ?>
-				<p class="dhps-tpt-card__teaser"><?php echo esc_html( $teasertext ); ?></p>
-				<?php elseif ( ! empty( $video['teaser'] ) ) : ?>
-				<p class="dhps-tpt-card__teaser"><?php echo esc_html( $video['teaser'] ); ?></p>
-				<?php endif; ?>
-
-				<?php if ( ! empty( $video['datum'] ) ) : ?>
-				<span class="dhps-tpt-card__date">
-					<?php echo esc_html( DHPS_TP_Parser::format_datum( $video['datum'] ) ); ?>
-				</span>
-				<?php endif; ?>
-			</div>
-
-		</article>
+		<?php
+		echo dhps_component( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Component liefert escapten HTML.
+			'content-card',
+			array(
+				'type'       => 'video',
+				'service'    => 'tp',
+				'title'      => $card_title,
+				'teaser'     => $card_teaser,
+				'media_url'  => $card_poster,
+				'media_alt'  => $card_title,
+				'class'      => 'dhps-tp-card dhps-tpt-card dhps-tpt-card--boxed',
+				'meta'       => $card_meta,
+				'data_attrs' => array(
+					'video-slug' => $card_slug,
+					'poster-url' => $card_poster,
+					'v-modus'    => $card_vmodus,
+				),
+				'actions'    => array(
+					array(
+						'label'   => __( 'Video abspielen', 'wp-deubner-hp-services' ),
+						'href'    => '#play',
+						'icon'    => 'play',
+						'primary' => true,
+					),
+				),
+			)
+		);
+		?>
 	</div>
 
 </div>

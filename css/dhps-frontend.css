@@ -1894,10 +1894,14 @@
 /* LXMIO: Service-Wrapper-Token-Switch (Recht-Blau), seit 0.14.2.
    Wirkt auf alle Plugin-Elemente die `--dhps-color-primary` nutzen,
    inkl. der JS-rendered Articles in dhps-mio.js. */
-.dhps-service--lxmio {
+.dhps-service--lxmio,
+.dhps-service--lp {
 	--dhps-color-primary: var(--dhps-color-recht, #0054A6);
 	--dhps-color-primary-hover: var(--dhps-color-recht-hover, #003A73);
 }
+/* LP: gleicher Wrapper-Token-Switch (seit 0.14.3). Wirkt auf TP-Layout-
+   Elemente (Filter-Buttons, Load-More, Featured-Heading) die sonst
+   Steuern-Gruen waeren. */
 
 /* LXMIO Recht-Branding: Blau statt Steuern-Gruen */
 .dhps-service--lxmio .dhps-news__group-title,

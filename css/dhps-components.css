@@ -949,4 +949,18 @@
 		color: var(--dhps-color-recht-hover);
 	}
 
+	/* LP-Play-Overlay (seit 0.14.3) - analog MAES-Hook, Recht-Blau statt Medizin-Teal. */
+	.dhps-content-card--service-lp .dhps-content-card__play-overlay {
+		color: var(--dhps-color-recht);
+	}
+	.dhps-content-card--service-lp .dhps-content-card__badge--top {
+		background: var(--dhps-color-recht-light);
+		color: var(--dhps-color-recht);
+	}
+
+	/* TP-Play-Overlay (seit 0.14.3) - Steuern-Gruen-Akzent. */
+	.dhps-content-card--service-tp .dhps-content-card__play-overlay {
+		color: var(--dhps-color-steuern);
+	}
+
 } /* /@layer dhps-components */

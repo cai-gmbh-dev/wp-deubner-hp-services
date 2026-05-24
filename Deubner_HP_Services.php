@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.14.2
+ * Version: 0.14.3
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -19,7 +19,7 @@
  * Developer Author: Kai R. Emde
  *
  * @package Deubner Homepage-Service
- * @version 0.14.2
+ * @version 0.14.3
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.14.2' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.14.3' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -55,7 +55,7 @@ define( 'DEUBNER_HP_SERVICES_API_BASE', 'https://www.deubner-online.de/' );
 /** @var string Nonce-Action fuer alle Admin-Formulare. */
 define( 'DEUBNER_HP_SERVICES_NONCE_ACTION', 'dhps_save_settings' );
 
-/** @var string Alpine.js-Vendor-Version (lokal gebundled, seit 0.14.2). */
+/** @var string Alpine.js-Vendor-Version (lokal gebundled, seit 0.14.3). */
 if ( ! defined( 'DHPS_ALPINE_VERSION' ) ) {
     define( 'DHPS_ALPINE_VERSION', '3.14.9' );
 }
@@ -96,7 +96,7 @@ spl_autoload_register( function ( $class_name ) {
 
 /*
 |--------------------------------------------------------------------------
-| Component-System-Helpers (v0.14.2)
+| Component-System-Helpers (v0.14.3)
 |--------------------------------------------------------------------------
 |
 | Die Klasse DHPS_Component_Registry wird via Autoloader geladen.
@@ -276,14 +276,14 @@ function dhps_init() {
     $maes_parser = new DHPS_MAES_Parser();
     DHPS_Parser_Registry::register( 'maes', $maes_parser );
 
-    // 3b. Component-Registry: UI-Bausteine registrieren (v0.14.2).
+    // 3b. Component-Registry: UI-Bausteine registrieren (v0.14.3).
     dhps_register_components();
 
     // 4. AJAX-Proxy registrieren (serverseitige News-Anfragen).
     $ajax_proxy = new DHPS_AJAX_Proxy( $api, $cache );
     $ajax_proxy->register();
 
-    // 4b. MMB-Lazy-Akkordeon AJAX-Endpoint (v0.14.2).
+    // 4b. MMB-Lazy-Akkordeon AJAX-Endpoint (v0.14.3).
     $mmb_ajax = new DHPS_MMB_AJAX_Handler( $client, $cache );
     $mmb_ajax->register();
 
@@ -378,7 +378,7 @@ function dhps_enqueue_frontend_styles() {
     wp_enqueue_style( 'dhps-frontend-css' );
 
     // Component-Stylesheet (Shared Components - Skeleton, EmptyState, LazyImage, Accordion, ...).
-    // Seit 0.14.2. Wird sofort geladen, weil die Components ueberall potentiell verwendet werden.
+    // Seit 0.14.3. Wird sofort geladen, weil die Components ueberall potentiell verwendet werden.
     wp_register_style(
         'dhps-components-css',
         DEUBNER_HP_SERVICES_URL . 'css/dhps-components.css',
@@ -388,7 +388,7 @@ function dhps_enqueue_frontend_styles() {
     );
     wp_enqueue_style( 'dhps-components-css' );
 
-    // Elementor-Atomic-Token-Bridge (seit 0.14.2, optional, Default aus).
+    // Elementor-Atomic-Token-Bridge (seit 0.14.3, optional, Default aus).
     // Bridget generische UI-Tokens an Elementor-Globals; Brand-Tokens bleiben isoliert.
     wp_register_style(
         'dhps-elementor-bridge-css',
@@ -429,11 +429,11 @@ function dhps_enqueue_frontend_styles() {
         true
     );
 
-    // MAES-Aktuelles JS-Block in v0.13.1 -> v0.14.2 ausgelagert,
-    // in v0.14.2 obsolet: ContentCard's Alpine-Toggle uebernimmt die
+    // MAES-Aktuelles JS-Block in v0.13.1 -> v0.14.3 ausgelagert,
+    // in v0.14.3 obsolet: ContentCard's Alpine-Toggle uebernimmt die
     // Akkordeon-Funktion. File geloescht, Enqueue entfernt.
 
-    // Alpine.js v3.x Vendor (lokal gebundled, defer, conditional enqueue, seit 0.14.2).
+    // Alpine.js v3.x Vendor (lokal gebundled, defer, conditional enqueue, seit 0.14.3).
     wp_register_script(
         'dhps-alpinejs-vendor',
         DEUBNER_HP_SERVICES_URL . 'public/js/vendor/alpinejs-3.14.x.min.js',
@@ -463,7 +463,7 @@ function dhps_enqueue_frontend_styles() {
 
 /*
 |--------------------------------------------------------------------------
-| Component-Registry-Bootstrap (v0.14.2)
+| Component-Registry-Bootstrap (v0.14.3)
 |--------------------------------------------------------------------------
 |
 | Registriert alle Plugin-internen UI-Components. Spaetere Specialists
@@ -474,7 +474,7 @@ function dhps_enqueue_frontend_styles() {
 /**
  * Registriert die Plugin-Components in der Component-Registry.
  *
- * @since 0.14.2
+ * @since 0.14.3
  *
  * @return void
  */
@@ -538,7 +538,7 @@ function dhps_register_components() {
             'collapsible' => false,
             'class'       => '',
             'service'     => '',
-            'data_attrs'  => array(),  // seit 0.14.2 - data-* fuer Player-Selectoren etc.
+            'data_attrs'  => array(),  // seit 0.14.3 - data-* fuer Player-Selectoren etc.
         ),
         'stateful'        => true,
         'requires_alpine' => 'conditional',
@@ -597,14 +597,14 @@ function dhps_register_components() {
      * Action: erlaubt Dritten (Specialists F5-F7, Theme, andere Plugins),
      * eigene Components zu registrieren.
      *
-     * @since 0.14.2
+     * @since 0.14.3
      */
     do_action( 'dhps_register_components' );
 }
 
 /*
 |--------------------------------------------------------------------------
-| Alpine.js Conditional Loading (v0.14.2)
+| Alpine.js Conditional Loading (v0.14.3)
 |--------------------------------------------------------------------------
 |
 | Alpine wird nur geladen, wenn ein DHPS-Shortcode auf der aktuellen Seite
@@ -616,7 +616,7 @@ function dhps_register_components() {
  * Frueh-Erkennung: durchsucht den Post-Content nach DHPS-Shortcodes
  * und setzt das Bedarf-Flag.
  *
- * @since 0.14.2
+ * @since 0.14.3
  *
  * @return void
  */
@@ -654,7 +654,7 @@ add_action( 'wp', 'dhps_detect_alpine_need', 20 );
  * Setzt Flag oder enqueued direkt, je nachdem ob wp_enqueue_scripts
  * schon gelaufen ist.
  *
- * @since 0.14.2
+ * @since 0.14.3
  *
  * @return void
  */
@@ -672,7 +672,7 @@ function dhps_request_alpine() {
 /**
  * Enqueued Alpine sofort (idempotent).
  *
- * @since 0.14.2
+ * @since 0.14.3
  *
  * @return void
  */
@@ -687,7 +687,7 @@ function dhps_enqueue_alpine_now() {
 /**
  * Footer-Catchup: enqueued Alpine wenn das Bedarf-Flag gesetzt wurde.
  *
- * @since 0.14.2
+ * @since 0.14.3
  *
  * @return void
  */
@@ -705,7 +705,7 @@ add_action( 'wp_enqueue_scripts', 'dhps_maybe_enqueue_alpine', 20 );
  * Components auf der Seite gerendert wurde. Greift auf das mark_used()
  * Pattern der DHPS_Component_Registry zurueck.
  *
- * @since 0.14.2
+ * @since 0.14.3
  *
  * @return void
  */
@@ -728,10 +728,10 @@ add_action( 'wp_enqueue_scripts', 'dhps_maybe_enqueue_components_js', 30 );
 /**
  * Registriert die Plugin-Optionen via WP-Settings-API (Defense-in-Depth, Sanitize-Callbacks).
  *
- * Seit 0.14.2. Aktuell nur Bridge-Toggle, weitere Optionen wandern bei
+ * Seit 0.14.3. Aktuell nur Bridge-Toggle, weitere Optionen wandern bei
  * Gelegenheit (z.B. v0.15.0 Admin-Dashboard) hierher.
  *
- * @since 0.14.2
+ * @since 0.14.3
  *
  * @return void
  */
@@ -754,7 +754,7 @@ add_action( 'admin_init', 'dhps_register_options' );
 /**
  * Setzt das defer-Attribut auf Alpine-Scripts.
  *
- * @since 0.14.2
+ * @since 0.14.3
  *
  * @param string $tag    Original Script-Tag-HTML.
  * @param string $handle Script-Handle.

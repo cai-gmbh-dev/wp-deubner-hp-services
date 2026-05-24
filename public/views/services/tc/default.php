@@ -29,24 +29,21 @@ $is_empty = ! empty( $data['is_empty'] );
 <div class="dhps-service dhps-service--tc <?php echo esc_attr( $layout_class . $custom_class ); ?>">
 
 	<?php if ( $is_empty ) : ?>
-		<div class="dhps-tc__empty" role="status">
-			<svg class="dhps-tc__empty-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-				<rect x="4" y="2" width="16" height="20" rx="2"/>
-				<line x1="8" y1="6" x2="16" y2="6"/>
-				<line x1="8" y1="10" x2="10" y2="10"/>
-				<line x1="12" y1="10" x2="14" y2="10"/>
-				<line x1="8" y1="14" x2="10" y2="14"/>
-				<line x1="12" y1="14" x2="14" y2="14"/>
-				<line x1="8" y1="18" x2="10" y2="18"/>
-				<line x1="12" y1="18" x2="14" y2="18"/>
-			</svg>
-			<h4 class="dhps-tc__empty-title">
-				<?php echo esc_html( 'Keine Steuer-Rechner verfuegbar' ); ?>
-			</h4>
-			<p class="dhps-tc__empty-text">
-				<?php echo esc_html( 'Pruefen Sie die Tax-Rechner Kundennummer in den Plugin-Einstellungen oder kontaktieren Sie den Deubner Verlag.' ); ?>
-			</p>
-		</div>
+		<?php
+		// EmptyState via Component (v0.14.4-Migration, dedupliziert).
+		// BC: zusaetzliche Klasse "dhps-tc__empty" haelt alte CSS-Selektoren funktional.
+		if ( function_exists( 'dhps_component' ) ) {
+			echo dhps_component( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Component liefert escapten HTML.
+				'empty-state',
+				array(
+					'icon'  => 'calculator',
+					'title' => __( 'Keine Steuer-Rechner verfuegbar', 'wp-deubner-hp-services' ),
+					'hint'  => __( 'Pruefen Sie die Tax-Rechner Kundennummer in den Plugin-Einstellungen oder kontaktieren Sie den Deubner Verlag.', 'wp-deubner-hp-services' ),
+					'class' => 'dhps-tc__empty',
+				)
+			);
+		}
+		?>
 	<?php else : ?>
 		<div class="dhps-tc__container">
 			<?php

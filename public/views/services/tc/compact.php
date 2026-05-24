@@ -17,11 +17,23 @@ $is_empty = ! empty( $data['is_empty'] );
 <div class="dhps-service dhps-service--tc dhps-service--tc-compact <?php echo esc_attr( $layout_class . $custom_class ); ?>">
 
 	<?php if ( $is_empty ) : ?>
-		<div class="dhps-tc__empty dhps-tc__empty--compact" role="status">
-			<p class="dhps-tc__empty-text">
-				<?php echo esc_html( 'Keine Steuer-Rechner verfuegbar - bitte Kundennummer pruefen.' ); ?>
-			</p>
-		</div>
+		<?php
+		// EmptyState via Component (v0.14.4-Migration).
+		// Compact-Variante: Modifier-Klasse "dhps-tc__empty--compact" fuer
+		// optionale CSS-Anpassung (z.B. kleineres Icon) in v0.14.5+.
+		// BC: "dhps-tc__empty" haelt alte Selektoren funktional.
+		if ( function_exists( 'dhps_component' ) ) {
+			echo dhps_component( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Component liefert escapten HTML.
+				'empty-state',
+				array(
+					'icon'  => 'calculator',
+					'title' => __( 'Keine Steuer-Rechner verfuegbar', 'wp-deubner-hp-services' ),
+					'hint'  => __( 'Bitte Kundennummer pruefen.', 'wp-deubner-hp-services' ),
+					'class' => 'dhps-tc__empty dhps-tc__empty--compact',
+				)
+			);
+		}
+		?>
 	<?php else : ?>
 		<div class="dhps-tc__container dhps-tc__container--compact">
 			<?php

@@ -184,6 +184,12 @@ $product_images = array(
 				</p>
 			</div>
 
+			<!-- React-Dashboard Mount-Point (seit 0.15.0).
+			     Health-Monitor + API-Test-Tools + Cache-Statistik werden hier
+			     gerendert. JS-Bundle `dhps-admin-react` wird conditional
+			     enqueued (siehe Deubner_HP_Services.php). -->
+			<div id="dhps-admin-react-root" data-dhps-admin-mount="dashboard"></div>
+
 		</div>
 	</div>
 </div>

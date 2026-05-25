@@ -19,6 +19,10 @@
  *   POST /dhps/v1/services/{slug}/test      -> Test-Request (rate-limited)
  *   GET  /dhps/v1/cache/stats               -> Cache-Inventar
  *   POST /dhps/v1/cache/flush?service={s}   -> Cache leeren (optional gefiltert)
+ *   POST /dhps/v1/services/{slug}/preview   -> Live-Preview (rate-limited, v0.15.3)
+ *
+ * v0.15.3 - Live-Preview-Erweiterung:
+ *   App -> LivePreviewPanel -> LivePreviewControls + LivePreviewIframe + LivePreviewMeta
  *
  * @package    Deubner Homepage-Service
  * @subpackage Admin/JS/React
@@ -66,6 +70,8 @@
 	var Flex = components.Flex;
 	var FlexItem = components.FlexItem;
 	var Text = components.__experimentalText || components.Text || 'span';
+	var SelectControl = components.SelectControl;
+	var TextControl = components.TextControl;
 
 	var __ = i18n.__;
 
@@ -641,6 +647,373 @@
 		);
 	}
 
+	// --- Live-Preview (v0.15.3) ----------------------------------------------
+
+	/**
+	 * Service-Whitelist (9 Haupt-Services laut Discovery Sektion 6.2).
+	 */
+	var PREVIEW_SERVICES = [
+		{ value: 'mio', label: 'MIO' },
+		{ value: 'lxmio', label: 'LXMIO' },
+		{ value: 'mmb', label: 'MMB' },
+		{ value: 'mil', label: 'MIL' },
+		{ value: 'tp', label: 'TP' },
+		{ value: 'tpt', label: 'TPT' },
+		{ value: 'tc', label: 'TC' },
+		{ value: 'maes', label: 'MAES' },
+		{ value: 'lp', label: 'LP' },
+	];
+
+	var PREVIEW_LAYOUTS = [
+		{ value: 'default', label: 'default' },
+		{ value: 'card', label: 'card' },
+		{ value: 'compact', label: 'compact' },
+	];
+
+	var PREVIEW_MAES_SECTIONS = [
+		{ value: '', label: '(alle)' },
+		{ value: 'videos', label: 'videos' },
+		{ value: 'merkblaetter', label: 'merkblaetter' },
+		{ value: 'aktuelles', label: 'aktuelles' },
+	];
+
+	/**
+	 * LivePreviewControls - Service/Layout/Class/Section + Render-Button.
+	 *
+	 * Props:
+	 *   service {string}                Aktueller Service-Slug.
+	 *   atts {object}                   {layout, class, section}.
+	 *   onServiceChange {function}      (slug) => void.
+	 *   onAttsChange {function}         (atts) => void.
+	 *   onRun {function}                () => void.
+	 *   loading {boolean}               Render-Loading-State.
+	 */
+	function LivePreviewControls( props ) {
+		var service = props.service || 'mio';
+		var atts = props.atts || {};
+		var onServiceChange = props.onServiceChange || function () {};
+		var onAttsChange = props.onAttsChange || function () {};
+		var onRun = props.onRun || function () {};
+		var loading = !! props.loading;
+
+		function patchAtts( patch ) {
+			var next = {};
+			Object.keys( atts ).forEach( function ( k ) { next[ k ] = atts[ k ]; } );
+			Object.keys( patch ).forEach( function ( k ) { next[ k ] = patch[ k ]; } );
+			onAttsChange( next );
+		}
+
+		var maesSectionRow = service === 'maes'
+			? h( FlexItem, { key: 'section' },
+				h( SelectControl, {
+					label: __( 'Section (nur MAES)', 'deubner_hp_services' ),
+					value: atts.section || '',
+					options: PREVIEW_MAES_SECTIONS,
+					onChange: function ( val ) { patchAtts( { section: val } ); },
+					'aria-label': __( 'MAES-Section auswaehlen', 'deubner_hp_services' ),
+				} )
+			)
+			: null;
+
+		return h( 'div', { className: 'dhps-react-preview-controls' },
+			h( Flex, { wrap: true, gap: 4, align: 'flex-end' },
+				h( FlexItem, {},
+					h( SelectControl, {
+						label: __( 'Service', 'deubner_hp_services' ),
+						value: service,
+						options: PREVIEW_SERVICES,
+						onChange: function ( val ) { onServiceChange( val ); },
+						'aria-label': __( 'Service fuer Live-Preview auswaehlen', 'deubner_hp_services' ),
+					} )
+				),
+				h( FlexItem, {},
+					h( SelectControl, {
+						label: __( 'Layout', 'deubner_hp_services' ),
+						value: atts.layout || 'default',
+						options: PREVIEW_LAYOUTS,
+						onChange: function ( val ) { patchAtts( { layout: val } ); },
+						'aria-label': __( 'Layout-Variante auswaehlen', 'deubner_hp_services' ),
+					} )
+				),
+				h( FlexItem, {},
+					h( TextControl, {
+						label: __( 'CSS-Class (optional)', 'deubner_hp_services' ),
+						value: atts['class'] || '',
+						onChange: function ( val ) { patchAtts( { 'class': val } ); },
+						placeholder: 'meine-klasse',
+						'aria-label': __( 'Optionale CSS-Class', 'deubner_hp_services' ),
+					} )
+				),
+				maesSectionRow,
+				h( FlexItem, {},
+					h( Button, {
+						variant: 'primary',
+						onClick: onRun,
+						isBusy: loading,
+						disabled: loading,
+						'aria-busy': loading ? 'true' : 'false',
+						'aria-label': __( 'Live-Preview rendern', 'deubner_hp_services' ),
+					}, loading
+						? __( 'Rendere...', 'deubner_hp_services' )
+						: __( 'Vorschau laden', 'deubner_hp_services' )
+					)
+				)
+			)
+		);
+	}
+
+	/**
+	 * LivePreviewIframe - iframe srcdoc-Container.
+	 *
+	 * Props:
+	 *   html {string}     Vollstaendige HTML-Seite (DOCTYPE + html + head + body).
+	 *   service {string}  Service-Slug fuer Title-Attribut + key.
+	 */
+	function LivePreviewIframe( props ) {
+		var html = props.html || '';
+		var service = props.service || 'unknown';
+
+		return h( 'div', { className: 'dhps-react-preview-iframe-wrap', style: { marginTop: '12px' } },
+			h( 'iframe', {
+				// key sorgt fuer kompletten Remount, damit srcdoc neu eingelesen wird.
+				key: 'dhps-iframe-' + service + '-' + html.length,
+				srcDoc: html,
+				sandbox: 'allow-same-origin allow-scripts',
+				title: __( 'DHPS Live-Preview: ', 'deubner_hp_services' ) + service,
+				'aria-label': __( 'Live-Preview-Inhalt fuer Service ', 'deubner_hp_services' ) + service,
+				style: {
+					width: '100%',
+					height: '600px',
+					border: '1px solid #ddd',
+					background: '#fff',
+				},
+			} )
+		);
+	}
+
+	/**
+	 * LivePreviewMeta - Metadaten zum letzten Render.
+	 *
+	 * Props:
+	 *   meta {object}  { size_bytes, render_time_ms, shortcode,
+	 *                    atts_applied, atts_rejected, api_cache_hit }
+	 */
+	function LivePreviewMeta( props ) {
+		var meta = props.meta || {};
+
+		// Defensives Schema-Reading (Belt-and-Suspenders, Discovery Sektion 9.6).
+		var sizeBytes = ( meta.size_bytes !== undefined && meta.size_bytes !== null )
+			? meta.size_bytes
+			: ( meta.bytes || 0 );
+		var renderTime = ( meta.render_time_ms !== undefined && meta.render_time_ms !== null )
+			? meta.render_time_ms
+			: ( meta.duration_ms || 0 );
+		var cacheHit = ( meta.api_cache_hit !== undefined && meta.api_cache_hit !== null )
+			? !! meta.api_cache_hit
+			: !! meta.cache_hit;
+		var shortcode = meta.shortcode || '';
+		var attsApplied = meta.atts_applied || {};
+		var attsRejected = meta.atts_rejected || [];
+
+		// atts_rejected kann Array (Schema) oder Object (Drift-Schutz) sein.
+		var rejectedList = [];
+		if ( Array.isArray( attsRejected ) ) {
+			rejectedList = attsRejected.slice();
+		} else if ( attsRejected && typeof attsRejected === 'object' ) {
+			rejectedList = Object.keys( attsRejected );
+		}
+
+		var appliedSummary = Object.keys( attsApplied ).map( function ( k ) {
+			return k + '=' + attsApplied[ k ];
+		} ).join( ' ' );
+
+		return h( 'div', {
+			className: 'dhps-react-preview-meta',
+			role: 'status',
+			'aria-live': 'polite',
+			style: { marginTop: '12px' },
+		},
+			h( Flex, { wrap: true, gap: 4, style: { marginBottom: '8px' } },
+				h( FlexItem, {},
+					h( Text, { variant: 'muted' }, __( 'Render-Zeit', 'deubner_hp_services' ) ),
+					h( 'div', { style: { fontSize: '16px', fontWeight: '600' } }, renderTime + ' ms' )
+				),
+				h( FlexItem, {},
+					h( Text, { variant: 'muted' }, __( 'Groesse', 'deubner_hp_services' ) ),
+					h( 'div', { style: { fontSize: '16px', fontWeight: '600' } }, formatBytes( sizeBytes ) )
+				),
+				h( FlexItem, {},
+					h( Text, { variant: 'muted' }, __( 'API-Cache', 'deubner_hp_services' ) ),
+					h( 'div', { style: { fontSize: '16px', fontWeight: '600' } },
+						cacheHit
+							? __( 'HIT', 'deubner_hp_services' )
+							: __( 'MISS', 'deubner_hp_services' )
+					)
+				)
+			),
+			shortcode ? h( 'div', { style: { marginBottom: '6px', fontSize: '12px' } },
+				h( 'span', {}, __( 'Shortcode: ', 'deubner_hp_services' ) ),
+				h( 'code', {}, shortcode )
+			) : null,
+			appliedSummary ? h( 'div', { style: { marginBottom: '6px', fontSize: '12px', color: '#646970' } },
+				h( 'span', {}, __( 'Atts angewendet: ', 'deubner_hp_services' ) ),
+				h( 'code', {}, appliedSummary )
+			) : null,
+			rejectedList.length > 0
+				? h( 'div', { role: 'status', style: { marginTop: '8px' } },
+					h( Notice, {
+						status: 'warning',
+						isDismissible: false,
+					}, __( 'Folgende Atts wurden ignoriert: ', 'deubner_hp_services' ) + rejectedList.join( ', ' ) )
+				)
+				: null
+		);
+	}
+
+	/**
+	 * LivePreviewPanel - Container fuer die Live-Preview (v0.15.3).
+	 *
+	 * State:
+	 *   service (string)    Service-Slug.
+	 *   atts (object)       {layout, class, section}.
+	 *   html (string)       Vollstaendige Preview-HTML-Seite.
+	 *   meta (object|null)  Render-Metadaten.
+	 *   loading (boolean)
+	 *   error (string|null)
+	 *
+	 * REST-Vertrag (Discovery Sektion 9.3) - 10 Felder:
+	 *   service, format, html, size_bytes, render_time_ms, shortcode,
+	 *   atts_applied, atts_rejected, api_cache_hit, rendered_at.
+	 */
+	function LivePreviewPanel() {
+		var stateService = useState( 'mio' );
+		var service = stateService[ 0 ];
+		var setService = stateService[ 1 ];
+
+		var stateAtts = useState( { layout: 'default', 'class': '', section: '' } );
+		var atts = stateAtts[ 0 ];
+		var setAtts = stateAtts[ 1 ];
+
+		var stateHtml = useState( '' );
+		var html = stateHtml[ 0 ];
+		var setHtml = stateHtml[ 1 ];
+
+		var stateMeta = useState( null );
+		var meta = stateMeta[ 0 ];
+		var setMeta = stateMeta[ 1 ];
+
+		var stateLoading = useState( false );
+		var loading = stateLoading[ 0 ];
+		var setLoading = stateLoading[ 1 ];
+
+		var stateError = useState( null );
+		var error = stateError[ 0 ];
+		var setError = stateError[ 1 ];
+
+		var runPreview = useCallback( function () {
+			setLoading( true );
+			setError( null );
+
+			// Sende nur befuellte Atts (leere Strings koennen vom Backend wegfallen).
+			var attsBody = {};
+			Object.keys( atts ).forEach( function ( k ) {
+				if ( atts[ k ] !== '' && atts[ k ] !== null && atts[ k ] !== undefined ) {
+					attsBody[ k ] = atts[ k ];
+				}
+			} );
+
+			apiFetch( {
+				path: '/dhps/v1/services/' + encodeURIComponent( service ) + '/preview',
+				method: 'POST',
+				data: {
+					atts: attsBody,
+					format: 'iframe',
+				},
+			} ).then( function ( result ) {
+				result = result || {};
+
+				// Defensives Schema-Reading (Discovery Sektion 9.6).
+				var resultHtml = ( typeof result.html === 'string' ) ? result.html : '';
+				var resultMeta = {
+					service: result.service || service,
+					format: result.format || 'iframe',
+					size_bytes: ( result.size_bytes !== undefined && result.size_bytes !== null )
+						? result.size_bytes
+						: ( result.bytes || 0 ),
+					render_time_ms: ( result.render_time_ms !== undefined && result.render_time_ms !== null )
+						? result.render_time_ms
+						: ( result.duration_ms || 0 ),
+					shortcode: result.shortcode || '',
+					atts_applied: result.atts_applied || {},
+					atts_rejected: result.atts_rejected || [],
+					api_cache_hit: ( result.api_cache_hit !== undefined && result.api_cache_hit !== null )
+						? !! result.api_cache_hit
+						: !! result.cache_hit,
+					rendered_at: result.rendered_at || Math.floor( Date.now() / 1000 ),
+				};
+
+				setHtml( resultHtml );
+				setMeta( resultMeta );
+			} ).catch( function ( err ) {
+				// eslint-disable-next-line no-console
+				console.error( '[dhps-admin-react] Live-Preview fehlgeschlagen:', service, err );
+				setError( ( err && err.message ) ? err.message : __( 'Render-Fehler.', 'deubner_hp_services' ) );
+			} ).finally( function () {
+				setLoading( false );
+			} );
+		}, [ service, atts ] );
+
+		var emptyHint = ( ! html && ! error && ! loading )
+			? h( 'div', { style: { marginTop: '12px' } },
+				h( Notice, {
+					status: 'info',
+					isDismissible: false,
+				}, __( 'Klicken Sie auf "Vorschau laden", um den Live-Render zu starten.', 'deubner_hp_services' ) )
+			)
+			: null;
+
+		var errorNode = error
+			? h( 'div', { role: 'alert', style: { marginTop: '12px' } },
+				h( Notice, {
+					status: 'error',
+					isDismissible: true,
+					onRemove: function () { setError( null ); },
+				}, error )
+			)
+			: null;
+
+		return h( 'section', {
+			'aria-labelledby': 'dhps-preview-panel-title',
+			'aria-busy': loading ? 'true' : 'false',
+			className: 'dhps-react-preview-panel',
+		},
+			h( Panel, {},
+				h( PanelBody, {
+					title: __( 'Live-Preview', 'deubner_hp_services' ),
+					initialOpen: false,
+				},
+					h( 'h2', {
+						id: 'dhps-preview-panel-title',
+						className: 'screen-reader-text',
+						style: { position: 'absolute', left: '-9999px' },
+					}, __( 'Live-Preview', 'deubner_hp_services' ) ),
+					h( LivePreviewControls, {
+						service: service,
+						atts: atts,
+						onServiceChange: setService,
+						onAttsChange: setAtts,
+						onRun: runPreview,
+						loading: loading,
+					} ),
+					errorNode,
+					emptyHint,
+					html ? h( LivePreviewIframe, { html: html, service: service } ) : null,
+					meta ? h( LivePreviewMeta, { meta: meta } ) : null
+				)
+			)
+		);
+	}
+
 	/**
 	 * App - Root-Komponente.
 	 */
@@ -662,7 +1035,9 @@
 				)
 			),
 			h( 'div', { style: { height: '16px' } } ),
-			h( CacheStatsPanel, {} )
+			h( CacheStatsPanel, {} ),
+			h( 'div', { style: { height: '16px' } } ),
+			h( LivePreviewPanel, {} )
 		);
 	}
 

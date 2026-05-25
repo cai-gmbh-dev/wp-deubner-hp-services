@@ -226,8 +226,10 @@ class DHPS_Health_Collector {
 		if ( '' === $value ) {
 			return '';
 		}
+		// QA-Fix v0.14.5 (SEC LOW-4.1): bei OTA-Werten <=6 Zeichen NICHT den
+		// Full-Wert + "..." leaken, sondern komplett maskieren.
 		if ( strlen( $value ) <= 6 ) {
-			return $value . '...';
+			return '***';
 		}
 		return substr( $value, 0, 6 ) . '...';
 	}

@@ -1975,33 +1975,29 @@
 	border: 1px dashed var(--dhps-color-border, #ddd);
 }
 
-.dhps-tc__empty-icon {
-	color: var(--dhps-color-meta, #999);
-	margin-bottom: 16px;
-}
-
-.dhps-tc__empty-title {
-	font-size: 1.0625rem;
-	font-weight: 600;
-	color: var(--dhps-color-text, #333);
-	margin: 0 0 8px;
-}
-
-.dhps-tc__empty-text {
-	font-size: 0.875rem;
-	color: var(--dhps-color-text-light, #555);
-	margin: 0;
-	max-width: 400px;
-	line-height: 1.5;
-}
+/* Toter Code v0.14.4 (Cleanup v0.14.5): .dhps-tc__empty-icon|title|text
+   wurden in v0.14.4 durch EmptyState-Component-Klassen ersetzt
+   (.dhps-empty-state__icon|title|hint). BC-Wrapper-Klasse .dhps-tc__empty
+   bleibt fuer Theme-Overrides erhalten. */
 
 .dhps-tc__empty--compact {
 	padding: 16px;
-	flex-direction: row;
 	gap: 8px;
 }
 
-.dhps-tc__empty--compact .dhps-tc__empty-text {
+/* TC-Compact-Icon-Modifier (v0.14.5): EmptyState-Icon in compact-Layout
+   verkleinern, damit es in Sidebars passt. Greift auf die EmptyState-
+   Component-Klasse `.dhps-empty-state__icon` durch. */
+.dhps-tc__empty--compact .dhps-empty-state__icon svg {
+	width: 28px;
+	height: 28px;
+}
+
+.dhps-tc__empty--compact .dhps-empty-state__title {
+	font-size: 0.9375rem;
+}
+
+.dhps-tc__empty--compact .dhps-empty-state__hint {
 	font-size: 0.8125rem;
 }
 

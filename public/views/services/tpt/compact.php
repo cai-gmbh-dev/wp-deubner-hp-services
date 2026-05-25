@@ -7,15 +7,16 @@
  * service='tp') mit `dhps-content-card--compact`-Modifier. Ideal fuer
  * Sidebars/Footer.
  *
- * Tech-Debt (laut Audit, Plan v0.14.3 Sektion 6 / TPT-#3):
- *   `get_option('dhps_tpt_ues')` und `get_option('dhps_tpt_teasertext')` werden
- *   weiterhin direkt im Template gelesen. Folge-Ticket fuer Verschiebung in
- *   Parser/Modules-Layer.
+ * Admin-Texte (Ueberschrift, Teasertext) kommen seit v0.14.5 ueber
+ * $data['tpt_config'] (Modules-Layer DHPS_TPT_Modules via Filter
+ * dhps_pipeline_data_tpt). Theme-Overrides ohne Modules-Layer-Bindung
+ * erhalten leere Strings (Null-Coalescing-Fallback).
  *
  * @package    Deubner Homepage-Service
  * @subpackage Public/Views/Services/TPT
  * @since      0.12.0
  * @since      0.14.3 Migration auf Component-System (ContentCard + EmptyState).
+ * @since      0.14.5 Admin-Texte via $data['tpt_config'] (DHPS_TPT_Modules).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -55,8 +56,10 @@ if ( '' !== $custom_class ) {
 		return;
 	}
 
-	$ueberschrift = (string) get_option( 'dhps_tpt_ues', '' );
-	$teasertext   = (string) get_option( 'dhps_tpt_teasertext', '' );
+	// Admin-konfigurierte Texte (seit v0.14.5 via DHPS_TPT_Modules in $data['tpt_config']).
+	$tpt_config   = isset( $data['tpt_config'] ) && is_array( $data['tpt_config'] ) ? $data['tpt_config'] : array();
+	$ueberschrift = (string) ( $tpt_config['ueberschrift'] ?? '' );
+	$teasertext   = (string) ( $tpt_config['teasertext'] ?? '' );
 
 	$card_title  = isset( $video['titel'] ) ? (string) $video['titel'] : '';
 	$card_slug   = (string) $video['video_slug'];

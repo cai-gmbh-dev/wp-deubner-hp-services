@@ -505,6 +505,26 @@ class DHPS_Admin_REST {
 	 * @param int    $limit_per_minute Maximalanzahl Requests/Minute.
 	 *
 	 * @return bool true wenn unter Limit, false sonst.
+	 *
+	 * Bekannte Limitierungen (dokumentiert in v0.14.5 nach SEC-Audit v0.15.0):
+	 *
+	 * - **Sliding-Window-Drift (SEC LOW-3.1)**: Der Counter wird beim ersten Hit
+	 *   mit TTL=60s gesetzt, das Fenster rollt nicht mit jedem Request.
+	 *   Praktische Konsequenz: 30 Requests koennen in den letzten 5s einer Minute
+	 *   und 30 weitere in den ersten 5s der naechsten Minute fallen - effektiv
+	 *   60 Requests in 10s. Akzeptabel fuer Admin-Tooling (manage_options-User),
+	 *   nicht akzeptabel fuer Public-Endpoints. Fix via Sliding-Window-Algorithmus
+	 *   (mehrere Buckets pro 10s) waere komplexer Speicher-Overhead - bewusst
+	 *   nicht implementiert.
+	 *
+	 * - **Race-Condition Counter-Increment (SEC LOW-3.2)**: get_transient +
+	 *   set_transient ist nicht atomar. Bei parallelen Requests koennen
+	 *   Counter-Increments verloren gehen. Praktischer Worst-Case: ~1-2
+	 *   Extra-Requests pro Minute - tolerabel. Echte Atomic-Counter erfordern
+	 *   wpdb-Lock oder Redis - bewusst nicht implementiert.
+	 *
+	 * Beide Schwaechen sind analog zum DHPS_MMB_AJAX_Handler-Pattern aus
+	 * v0.14.0 akzeptiert (siehe docs/project/11-SECURITY-AUDIT-v0140.md).
 	 */
 	private function check_rate_limit( string $bucket, int $limit_per_minute ): bool {
 		$user_id = get_current_user_id();

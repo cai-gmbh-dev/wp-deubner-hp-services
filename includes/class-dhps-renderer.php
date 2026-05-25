@@ -161,6 +161,22 @@ class DHPS_Renderer {
 		$layout_class  = 'dhps-layout--' . sanitize_html_class( $layout );
 		$custom_class  = '' !== $css_class ? ' ' . sanitize_html_class( $css_class ) : '';
 
+		/**
+		 * Filtert die geparsten Daten vor dem Template-Render.
+		 *
+		 * Erlaubt Modules-Layern (z.B. DHPS_TPT_Modules) das $data-Array um
+		 * Admin-konfigurierte Texte/Settings anzureichern, ohne dass die
+		 * Templates direkt get_option() aufrufen muessen.
+		 *
+		 * Hook-Name: dhps_pipeline_data_{tag} (z.B. dhps_pipeline_data_tpt).
+		 *
+		 * @since 0.14.5
+		 *
+		 * @param array  $data   Parser-Output (inkl. service_tag).
+		 * @param string $layout Aktuelles Layout (default|card|compact|...).
+		 */
+		$data = apply_filters( 'dhps_pipeline_data_' . $tag, $data, $layout );
+
 		// Template rendern via Output-Buffering.
 		ob_start();
 		include $template_file;

@@ -11,16 +11,17 @@
  * Empty-State: wenn $video leer, rendert EmptyState-Component (sichtbare
  * Editor-Vorschau statt stummem return).
  *
- * Tech-Debt (laut Audit, Plan v0.14.3 Sektion 6 / TPT-#3):
- *   `get_option('dhps_tpt_ues')` und `get_option('dhps_tpt_teasertext')` werden
- *   weiterhin direkt im Template gelesen. Eine Verschiebung in Parser/Modules
- *   wuerde den TPT_Parser ohne API-Daten-Aufgabe erweitern (admin-konfigurierte
- *   Texte sind keine Anreicherung von API-Payloads). Folge-Ticket noetig.
+ * Admin-Texte (Ueberschrift, Teasertext) kommen seit v0.14.5 ueber
+ * $data['tpt_config'] (Modules-Layer DHPS_TPT_Modules via Filter
+ * dhps_pipeline_data_tpt). Theme-Overrides ohne Modules-Layer-Bindung
+ * erhalten leere Strings (Null-Coalescing-Fallback).
  *
  * Verfuegbare Variablen:
  *   $data          (array)  Strukturiertes Array aus DHPS_TPT_Parser:
  *                            - 'video'       (array|null) Das einzelne Video
  *                            - 'service_tag' (string)     'tpt'
+ *                            - 'tpt_config'  (array)      ['ueberschrift' => string,
+ *                                                          'teasertext'   => string]
  *   $service_class (string) 'dhps-service--tpt'
  *   $layout_class  (string) 'dhps-layout--default'
  *   $custom_class  (string) Optionale CSS-Klasse
@@ -29,6 +30,7 @@
  * @subpackage Public/Views/Services/TPT
  * @since      0.12.0
  * @since      0.14.3 Migration auf Component-System (ContentCard + EmptyState).
+ * @since      0.14.5 Admin-Texte via $data['tpt_config'] (DHPS_TPT_Modules).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -72,9 +74,10 @@ if ( '' !== $custom_class ) {
 		return;
 	}
 
-	// Admin-konfigurierte Texte (Tech-Debt: get_option im Template, s. Header-Kommentar).
-	$ueberschrift = (string) get_option( 'dhps_tpt_ues', '' );
-	$teasertext   = (string) get_option( 'dhps_tpt_teasertext', '' );
+	// Admin-konfigurierte Texte (seit v0.14.5 via DHPS_TPT_Modules in $data['tpt_config']).
+	$tpt_config   = isset( $data['tpt_config'] ) && is_array( $data['tpt_config'] ) ? $data['tpt_config'] : array();
+	$ueberschrift = (string) ( $tpt_config['ueberschrift'] ?? '' );
+	$teasertext   = (string) ( $tpt_config['teasertext'] ?? '' );
 
 	// Optional: Section-Heading vor der Card (admin-konfiguriert).
 	if ( '' !== $ueberschrift ) :

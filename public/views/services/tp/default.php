@@ -216,16 +216,19 @@ $wrapper_classes .= ' dhps-tp-style--' . $tp_style;
 	<section class="dhps-tp-catalog" aria-label="<?php echo esc_attr__( 'Alle Video-Tipps', 'wp-deubner-hp-services' ); ?>">
 		<h3 class="dhps-tp-catalog__heading"><?php esc_html_e( 'Alle Video-Tipps', 'wp-deubner-hp-services' ); ?></h3>
 
-		<!-- Kategorie-Filter (Markup unveraendert - TP-JS-Selektoren). -->
+		<!-- Kategorie-Filter (Markup unveraendert - TP-JS-Selektoren).
+		     aria-controls verweist auf die ContentList-Region (A11y-Fix v0.14.5). -->
 		<nav class="dhps-filter-bar dhps-tp-catalog__filter" aria-label="<?php echo esc_attr__( 'Kategorien', 'wp-deubner-hp-services' ); ?>">
 			<button class="dhps-filter-bar__btn dhps-tp-filter__btn dhps-filter-bar__btn--active dhps-tp-filter__btn--active"
-					data-filter="all" aria-pressed="true" type="button">
+					data-filter="all" aria-pressed="true" type="button"
+					aria-controls="<?php echo esc_attr( $list_id ); ?>">
 				<?php esc_html_e( 'Alle', 'wp-deubner-hp-services' ); ?>
 			</button>
 			<?php foreach ( $categories as $index => $cat ) : ?>
 			<button class="dhps-filter-bar__btn dhps-tp-filter__btn"
 					data-filter="<?php echo esc_attr( (string) $index ); ?>"
-					aria-pressed="false" type="button">
+					aria-pressed="false" type="button"
+					aria-controls="<?php echo esc_attr( $list_id ); ?>">
 				<?php echo esc_html( isset( $cat['name'] ) ? (string) $cat['name'] : '' ); ?>
 			</button>
 			<?php endforeach; ?>

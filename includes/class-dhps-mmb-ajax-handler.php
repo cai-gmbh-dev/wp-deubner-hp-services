@@ -46,6 +46,18 @@ class DHPS_MMB_AJAX_Handler {
 	private const ALLOWED_SERVICES = array( 'mmb', 'mil' );
 
 	/**
+	 * Erlaubte Layouts fuer Partial-Auswahl (strikte Whitelist).
+	 *
+	 * Wird in handle_request() ueber sanitize_key() + in_array() strict
+	 * gegen Path-Traversal abgesichert. Bei unbekanntem Layout wird
+	 * auf 'default' zurueckgefallen (BC-konform).
+	 *
+	 * @since 0.15.2
+	 * @var array<int,string>
+	 */
+	private const ALLOWED_LAYOUTS = array( 'default', 'card', 'compact' );
+
+	/**
 	 * Maximale Requests pro IP pro Minute.
 	 *
 	 * @since 0.14.0
@@ -157,10 +169,17 @@ class DHPS_MMB_AJAX_Handler {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Nonce bereits geprueft.
 		$service_raw     = isset( $_REQUEST['service'] ) ? wp_unslash( $_REQUEST['service'] ) : '';
 		$category_id_raw = isset( $_REQUEST['category_id'] ) ? wp_unslash( $_REQUEST['category_id'] ) : '';
+		$layout_raw      = isset( $_REQUEST['layout'] ) ? wp_unslash( $_REQUEST['layout'] ) : 'default';
 		// phpcs:enable
 
 		$service     = sanitize_key( (string) $service_raw );
 		$category_id = sanitize_key( (string) $category_id_raw );
+		$layout      = sanitize_key( (string) $layout_raw );
+
+		// Layout-Whitelist (strict, Path-Traversal-Schutz). Default-Fallback bei Mismatch.
+		if ( ! in_array( $layout, self::ALLOWED_LAYOUTS, true ) ) {
+			$layout = 'default';
+		}
 
 		// 4. Service-Whitelist (strict).
 		if ( ! in_array( $service, self::ALLOWED_SERVICES, true ) ) {
@@ -274,8 +293,8 @@ class DHPS_MMB_AJAX_Handler {
 			);
 		}
 
-		// 12. HTML rendern (Partial-Template).
-		$rendered_html = $this->render_category_html( $category, $service );
+		// 12. HTML rendern (Partial-Template, Layout-spezifisch seit 0.15.2).
+		$rendered_html = $this->render_category_html( $category, $service, $layout );
 
 		// 13. Response-Payload bauen.
 		$fact_sheets = isset( $category['fact_sheets'] ) && is_array( $category['fact_sheets'] )
@@ -339,19 +358,51 @@ class DHPS_MMB_AJAX_Handler {
 	/**
 	 * Rendert das Partial-Template fuer eine Kategorie.
 	 *
-	 * Verwendet das Partial public/views/services/mmb/partials/category-content.php
-	 * und filtert den Output abschliessend ueber wp_kses_post() (Defense in Depth).
+	 * Waehlt das Layout-spezifische Partial anhand der ALLOWED_LAYOUTS-
+	 * Whitelist. Bei unbekanntem Layout faellt der Aufruf auf 'default'
+	 * zurueck (BC: alte AJAX-Calls ohne layout-Param liefern weiter das
+	 * Default-Partial).
+	 *
+	 * Pfad-Map:
+	 *   - default -> partials/category-content.php
+	 *   - card    -> partials/card-content.php
+	 *   - compact -> partials/compact-content.php
+	 *
+	 * Defense in Depth: Output wird abschliessend ueber wp_kses_post()
+	 * gefiltert.
 	 *
 	 * @since 0.14.0
+	 * @since 0.15.2 Layout-Whitelist + Partial-Switch (card/compact).
 	 *
 	 * @param array  $category    Strukturiertes Kategorie-Array (id, name, fact_sheets).
 	 * @param string $service_tag 'mmb' oder 'mil'.
+	 * @param string $layout      'default' | 'card' | 'compact' (bereits whitelisted).
 	 *
 	 * @return string Gerendertes, gefiltertes HTML.
 	 */
-	private function render_category_html( array $category, string $service_tag ): string {
+	private function render_category_html( array $category, string $service_tag, string $layout = 'default' ): string {
+		// Defense in Depth: Whitelist nochmal pruefen (falls jemand direkt aufruft).
+		if ( ! in_array( $layout, self::ALLOWED_LAYOUTS, true ) ) {
+			$layout = 'default';
+		}
+
+		// Path-Map zum Partial (strict, kein dynamischer String-Build).
+		$partials = array(
+			'default' => 'category-content.php',
+			'card'    => 'card-content.php',
+			'compact' => 'compact-content.php',
+		);
+
+		$partial_file = isset( $partials[ $layout ] ) ? $partials[ $layout ] : 'category-content.php';
+
 		$template = trailingslashit( DEUBNER_HP_SERVICES_PATH )
-			. 'public/views/services/mmb/partials/category-content.php';
+			. 'public/views/services/mmb/partials/' . $partial_file;
+
+		// Fallback auf Default-Partial wenn Layout-spezifisches Partial fehlt.
+		if ( ! file_exists( $template ) ) {
+			$template = trailingslashit( DEUBNER_HP_SERVICES_PATH )
+				. 'public/views/services/mmb/partials/category-content.php';
+		}
 
 		if ( ! file_exists( $template ) ) {
 			return '';

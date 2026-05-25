@@ -419,7 +419,8 @@
 				existing.forEach( function ( el ) { el.remove(); } );
 			}
 
-			// Neuen Video-Player unter dem Item erstellen.
+			// Neuen Video-Player innerhalb des Items erstellen (HTML-valide:
+			// <div> ist Kind von <li> statt Geschwister im <ul>).
 			var playerDiv = document.createElement( 'div' );
 			playerDiv.className = 'dhps-tp-compact__player';
 			playerDiv.innerHTML =
@@ -430,7 +431,7 @@
 				'<span class="dhps-news__loading"><span class="dhps-news__spinner" aria-hidden="true"></span></span>' +
 				'</div></div>';
 
-			item.after( playerDiv );
+			item.appendChild( playerDiv );
 
 			// iframe direkt laden.
 			var config = {

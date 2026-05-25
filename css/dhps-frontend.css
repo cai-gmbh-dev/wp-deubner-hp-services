@@ -2413,6 +2413,7 @@
 
 .dhps-tp-compact__item {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 8px;
 	padding: 8px 14px;
@@ -2458,7 +2459,11 @@
 }
 
 .dhps-tp-compact__player {
-	padding: 8px 14px 16px;
+	/* Player ist seit v0.15.2 Kind von <li class="dhps-tp-compact__item">
+	   (HTML-valide). Flex-Basis 100% bricht die Flex-Zeile so, dass der
+	   Player als Block unter dem Button-Row erscheint. */
+	flex: 1 1 100%;
+	padding: 8px 0 8px;
 }
 
 .dhps-tp-compact__player .dhps-tp-video__player {

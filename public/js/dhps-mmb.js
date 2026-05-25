@@ -114,6 +114,10 @@
 		var nonce      = container.getAttribute( 'data-nonce' ) || '';
 		var service    = container.getAttribute( 'data-service-tag' ) || 'mmb';
 
+		// Layout-Param (seit 0.15.2). BC: bei fehlendem data-layout liefert
+		// der Endpoint das default-Partial.
+		var layout = container.getAttribute( 'data-layout' ) || 'default';
+
 		if ( '' === categoryId || '' === ajaxUrl || '' === nonce ) {
 			return;
 		}
@@ -128,6 +132,7 @@
 			'?action=dhps_mmb_category_load' +
 			'&service=' + encodeURIComponent( service ) +
 			'&category_id=' + encodeURIComponent( categoryId ) +
+			'&layout=' + encodeURIComponent( layout ) +
 			'&_wpnonce=' + encodeURIComponent( nonce );
 
 		fetch( url, {
@@ -415,7 +420,7 @@
 					cat.style.display = '';
 					cat.removeAttribute( 'hidden' );
 
-					// Bei Einzelfilter: Kategorie automatisch oeffnen.
+					// Bei Einzelfilter: Kategorie automatisch oeffnen + Lazy-Load triggern.
 					if ( filter !== 'all' ) {
 						var trigger = cat.querySelector( '[data-dhps-mmb-category-toggle]' );
 						var content = trigger ? document.getElementById( trigger.getAttribute( 'aria-controls' ) ) : null;
@@ -426,6 +431,12 @@
 						if ( content ) {
 							content.setAttribute( 'aria-hidden', 'false' );
 						}
+
+						// Lazy-Load triggern wenn noch nicht geladen (seit 0.15.2).
+						var state = cat.getAttribute( 'data-dhps-mmb-lazy-state' );
+						if ( content && ( 'pending' === state || 'error' === state ) ) {
+							loadCategorySheets( cat, content, container );
+						}
 					}
 				} else {
 					cat.style.display = 'none';
@@ -434,6 +445,8 @@
 			} );
 
 			// Bei "Alle": Erste Kategorie oeffnen, Rest schliessen.
+			// Lazy-Load: nur erste Kategorie laden (R5 Discovery-Plan -
+			// vermeidet 5+ parallele AJAX-Calls bei "Alle"-Klick).
 			if ( filter === 'all' ) {
 				categories.forEach( function ( cat, idx ) {
 					var trigger = cat.querySelector( '[data-dhps-mmb-category-toggle]' );
@@ -445,6 +458,14 @@
 					}
 					if ( content ) {
 						content.setAttribute( 'aria-hidden', shouldOpen ? 'false' : 'true' );
+					}
+
+					// Lazy-Load NUR fuer die erste Kategorie wenn pending (seit 0.15.2).
+					if ( shouldOpen && content ) {
+						var firstState = cat.getAttribute( 'data-dhps-mmb-lazy-state' );
+						if ( 'pending' === firstState || 'error' === firstState ) {
+							loadCategorySheets( cat, content, container );
+						}
 					}
 				} );
 			}

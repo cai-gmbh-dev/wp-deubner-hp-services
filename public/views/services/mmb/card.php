@@ -1,9 +1,18 @@
 <?php
 /**
- * Service-Template: MMB Card-Layout.
+ * Service-Template: MMB Card-Layout (Lazy-Akkordeon, seit 0.15.2).
  *
- * Card-Wrapper mit Tab-Navigation fuer Rubriken und
- * Card-Grid fuer Merkblaetter.
+ * Card-Wrapper mit Filter-Bar fuer Rubriken und Card-Grid fuer Merkblaetter.
+ * Initial werden nur die Kategorie-Header + Counts geladen. Die Fact-Sheets
+ * einer Kategorie werden beim ersten Open per AJAX nachgeladen
+ * (Endpoint: action=dhps_mmb_category_load, layout=card).
+ *
+ * Tab-Navigation: Die erste Kategorie ist per Default pre-rendered (Filter
+ * dhps_mmb_card_prerender_first_category, default true), damit der Filter-
+ * Klick "Alle" nicht 5+ Skeletons zeigt (Discovery-Plan v0.15.2 R5).
+ *
+ * SEO-Schutz: Innerhalb eines <noscript>-Blocks wird die vollstaendige
+ * Card-Grid-Liste fuer Crawler ohne JS gerendert.
  *
  * Kann vom Theme ueberschrieben werden unter:
  * {theme}/dhps/services/mmb/card.php
@@ -11,19 +20,37 @@
  * @package    Deubner Homepage-Service
  * @subpackage Public/Views/Services/MMB
  * @since      0.9.1
+ * @since      0.15.2 Lazy-Akkordeon + AJAX-on-Demand + noscript-Fallback +
+ *                    Pre-Render-Filter fuer erste Kategorie (Tab-Nav-Kompat).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$categories    = $data['categories'] ?? array();
-$search_config = $data['search_config'] ?? array();
+$categories     = $data['categories'] ?? array();
+$search_config  = $data['search_config'] ?? array();
 $service_tag    = $data['service_tag'] ?? 'mmb';
 $download_label = ( 'mil' === $service_tag ) ? 'Infografik herunterladen' : 'PDF herunterladen';
 $is_mil         = ( 'mil' === $service_tag );
 
+/**
+ * Filter: erlaubt das initiale Vorrendern der ersten Kategorie (Above-the-fold).
+ *
+ * Default: true (Tab-Navigation-Kompatibilitaet - Filter "Alle" zeigt sonst
+ * nur Skeletons fuer alle 5+ Kategorien gleichzeitig).
+ *
+ * @since 0.15.2
+ *
+ * @param bool $pre_render_first true wenn die erste Kategorie initial gerendert werden soll.
+ */
+$pre_render_first = (bool) apply_filters( 'dhps_mmb_card_prerender_first_category', true );
+
 wp_enqueue_script( 'dhps-mmb-js' );
+
+// Partial-Pfad fuer noscript-Fallback und Pre-Render (Pfadberechnung einmalig).
+$partial_path = trailingslashit( DEUBNER_HP_SERVICES_PATH )
+	. 'public/views/services/mmb/partials/card-content.php';
 ?>
 <div class="dhps-service <?php echo esc_attr( $service_class . ' ' . $layout_class . $custom_class ); ?>">
 <div class="dhps-card">
@@ -73,23 +100,35 @@ wp_enqueue_script( 'dhps-mmb-js' );
 	<div class="dhps-mmb-results" data-dhps-mmb-results hidden></div>
 
 	<?php if ( ! empty( $categories ) ) : ?>
-	<section class="dhps-mmb-categories"
+	<section class="dhps-mmb-categories dhps-mmb-categories--card"
 			 aria-label="<?php echo esc_attr( 'Merkblatt-Kategorien' ); ?>"
 			 data-dhps-mmb-categories
+			 data-layout="card"
 			 data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
 			 data-nonce="<?php echo esc_attr( wp_create_nonce( 'dhps_mmb_nonce' ) ); ?>"
 			 data-service-tag="<?php echo esc_attr( $service_tag ); ?>">
 
-		<?php foreach ( $categories as $index => $category ) :
+		<?php
+		foreach ( $categories as $index => $category ) :
 			$cat_id    = esc_attr( $category['id'] );
-			$cat_count = count( $category['fact_sheets'] );
-			$is_first  = ( 0 === $index );
+			$cat_count = isset( $category['fact_sheets'] ) && is_array( $category['fact_sheets'] )
+				? count( $category['fact_sheets'] )
+				: 0;
+			$is_first         = ( 0 === $index );
+			$pre_rendered     = ( $is_first && $pre_render_first );
+			$initial_state    = $pre_rendered ? 'loaded' : 'pending';
+			$initial_expanded = $pre_rendered ? 'true' : 'false';
+			$initial_hidden   = $pre_rendered ? 'false' : 'true';
 		?>
-		<div class="dhps-mmb-category" data-dhps-mmb-category data-category="<?php echo esc_attr( $category['id'] ); ?>">
+		<div class="dhps-mmb-category dhps-mmb-category--lazy"
+			 data-dhps-mmb-category
+			 data-category="<?php echo $cat_id; ?>"
+			 data-dhps-mmb-lazy-state="<?php echo esc_attr( $initial_state ); ?>">
+
 			<h3 class="dhps-mmb-category__header">
 				<button type="button"
 						class="dhps-mmb-category__trigger"
-						aria-expanded="<?php echo $is_first ? 'true' : 'false'; ?>"
+						aria-expanded="<?php echo esc_attr( $initial_expanded ); ?>"
 						aria-controls="dhps-mmb-card-<?php echo $cat_id; ?>"
 						data-dhps-mmb-category-toggle>
 					<span class="dhps-mmb-category__icon" aria-hidden="true">
@@ -98,7 +137,9 @@ wp_enqueue_script( 'dhps-mmb-js' );
 					<span class="dhps-mmb-category__name">
 						<?php echo esc_html( $category['name'] ); ?>
 					</span>
-					<span class="dhps-mmb-category__count">(<?php echo esc_html( $cat_count ); ?>)</span>
+					<span class="dhps-mmb-category__count" aria-label="<?php echo esc_attr( $cat_count . ' Merkblaetter' ); ?>">
+						(<?php echo esc_html( $cat_count ); ?>)
+					</span>
 					<svg class="dhps-mmb-category__chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 						<polyline points="6 9 12 15 18 9"/>
 					</svg>
@@ -108,50 +149,24 @@ wp_enqueue_script( 'dhps-mmb-js' );
 			<div class="dhps-mmb-category__content"
 				 id="dhps-mmb-card-<?php echo $cat_id; ?>"
 				 role="region"
-				 <?php echo $is_first ? '' : 'aria-hidden="true"'; ?>>
+				 aria-hidden="<?php echo esc_attr( $initial_hidden ); ?>">
 
-				<?php if ( ! empty( $category['fact_sheets'] ) ) : ?>
-				<div class="dhps-mmb-card-grid">
-					<?php foreach ( $category['fact_sheets'] as $sheet ) :
-						$sheet_id = esc_attr( $sheet['id'] );
+				<?php if ( $pre_rendered ) : ?>
+					<?php
+					// Optional vorgerenderte erste Kategorie (Filter dhps_mmb_card_prerender_first_category).
+					if ( file_exists( $partial_path ) ) {
+						include $partial_path;
+					}
 					?>
-					<div class="dhps-mmb-card-item">
-						<div class="dhps-mmb-card-item__icon" aria-hidden="true">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2">
-								<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-								<polyline points="14 2 14 8 20 8"/>
-								<line x1="16" y1="13" x2="8" y2="13"/>
-								<line x1="16" y1="17" x2="8" y2="17"/>
-								<polyline points="10 9 9 9 8 9"/>
-							</svg>
-						</div>
-						<h4 class="dhps-mmb-card-item__title"><?php echo esc_html( $sheet['title'] ); ?></h4>
-						<?php if ( ! empty( $sheet['description'] ) ) : ?>
-						<p class="dhps-mmb-card-item__desc"><?php echo esc_html( mb_strimwidth( $sheet['description'], 0, 120, '...' ) ); ?></p>
-						<?php endif; ?>
-						<?php
-						if ( $is_mil && ! empty( $sheet['pdf_params']['merkblatt'] ) ) {
-							$pdf_href = 'https://www.deubner-online.de/einbau/mil/content/merkblaetter/' . $sheet['pdf_params']['merkblatt'] . '.pdf';
-						} else {
-							$pdf_href = admin_url( 'admin-ajax.php' ) . '?' . http_build_query( array_merge(
-								array( 'action' => 'dhps_mmb_pdf', 'nonce' => wp_create_nonce( 'dhps_mmb_nonce' ), 'service' => $service_tag ),
-								$sheet['pdf_params']
-							) );
-						}
-						?>
-						<a class="dhps-mmb-card-item__download"
-						   href="<?php echo esc_url( $pdf_href ); ?>"
-						   target="_blank" rel="noopener">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-								<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-								<polyline points="7 10 12 15 17 10"/>
-								<line x1="12" y1="15" x2="12" y2="3"/>
-							</svg>
-							<?php echo esc_html( $download_label ); ?>
-						</a>
-					</div>
-					<?php endforeach; ?>
-				</div>
+				<?php else : ?>
+					<?php
+					// Skeleton-Loader-Slot, sichtbar nur waehrend state="loading"
+					// (CSS-State-Machine in dhps-frontend.css steuert Sichtbarkeit).
+					echo dhps_component( 'skeleton-loader', array(
+						'type'  => 'card',
+						'count' => min( max( $cat_count, 1 ), 5 ),
+					) );
+					?>
 				<?php endif; ?>
 
 			</div>
@@ -159,6 +174,34 @@ wp_enqueue_script( 'dhps-mmb-js' );
 		<?php endforeach; ?>
 
 	</section>
+
+	<!-- noscript-Fallback: volle Liste fuer Crawler / JS-Disabled (SEO-Schutz). -->
+	<noscript>
+		<section class="dhps-mmb-categories dhps-mmb-categories--card dhps-mmb-categories--noscript"
+				 aria-label="<?php echo esc_attr( 'Merkblatt-Kategorien (ohne JavaScript)' ); ?>">
+			<?php foreach ( $categories as $category ) :
+				$cat_id_ns = esc_attr( $category['id'] );
+			?>
+			<div class="dhps-mmb-category" data-category="<?php echo $cat_id_ns; ?>">
+				<h3 class="dhps-mmb-category__header">
+					<span class="dhps-mmb-category__icon" aria-hidden="true">
+						<?php echo esc_html( DHPS_MMB_Parser::get_category_icon( $category['icon_slug'] ) ); ?>
+					</span>
+					<span class="dhps-mmb-category__name">
+						<?php echo esc_html( $category['name'] ); ?>
+					</span>
+				</h3>
+				<div class="dhps-mmb-category__content" role="region">
+					<?php
+					if ( file_exists( $partial_path ) ) {
+						include $partial_path;
+					}
+					?>
+				</div>
+			</div>
+			<?php endforeach; ?>
+		</section>
+	</noscript>
 	<?php endif; ?>
 
 </div>

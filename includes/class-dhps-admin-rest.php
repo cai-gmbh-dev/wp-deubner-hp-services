@@ -526,14 +526,22 @@ class DHPS_Admin_REST {
 	 *     "rendered_at":     int       // Unix-Timestamp
 	 *   }
 	 *
-	 * Error-Codes:
+	 * Error-Codes (6 total):
 	 *   - invalid_service         (400)
 	 *   - service_not_configured  (400)
 	 *   - invalid_endpoint        (404)
+	 *   - invalid_format          (400, seit v0.15.4) - format != 'iframe'
 	 *   - rate_limit_exceeded     (429)
 	 *   - preview_render_failed   (500)
 	 *
+	 * Atts-Validation (v0.15.5): Top-Level-Whitelist wurde durch
+	 * DHPS_Preview_Renderer::SERVICE_ATTS_SCHEMA + validate_att_value() ersetzt.
+	 * Reject-Reasons (9 total) entstehen ausschliesslich im Renderer und landen
+	 * in atts_rejected (non-fatal, kein eigener Error-Code).
+	 *
 	 * @since 0.15.3
+	 * @since 0.15.4 invalid_format Error-Code dokumentiert (QA-Caveat C2).
+	 * @since 0.15.5 Schema-getriebene Atts-Validation via SERVICE_ATTS_SCHEMA.
 	 *
 	 * @param WP_REST_Request $request Request-Objekt.
 	 *
@@ -622,50 +630,27 @@ class DHPS_Admin_REST {
 			);
 		}
 
-		// 4. Atts vor-sanitisieren (Top-Level Whitelist).
-		//    Die finale Whitelist-Pruefung erfolgt im Renderer und fuellt
-		//    atts_applied / atts_rejected.
+		// 4. Atts-Key-Sanitisierung + scalar-Wall (v0.15.5).
+		//    Die vollstaendige Schema-Validation (type/bounds/options/pattern/
+		//    sanitize) wandert in den Renderer via SERVICE_ATTS_SCHEMA. Hier
+		//    nur Layer-4-Defense:
+		//      - Key durch sanitize_key (a-z0-9_)
+		//      - Wert muss scalar sein (Anti-XSS-Wall gegen Array/Object)
 		//
-		//    v0.15.4: Whitelist um `cache` erweitert (alle Sub-Shortcodes haben
-		//    es). `section` ist weiterhin nur fuer MAES + maes_*-Sub-Shortcodes
-		//    relevant (der Renderer setzt das hart durch).
-		$known_top_keys = array( 'layout', 'class', 'section', 'cache' );
-
+		//    Reject-Reasons (unknown att key / not allowed for service /
+		//    invalid type / out of bounds / pattern mismatch / value not in
+		//    whitelist / value not boolean / invalid html-class chars /
+		//    only allowed for maes) entstehen ausschliesslich im Renderer.
 		$sanitized_atts = array();
-		if ( isset( $atts_raw['layout'] ) && is_scalar( $atts_raw['layout'] ) ) {
-			$sanitized_atts['layout'] = (string) $atts_raw['layout'];
-		}
-		if ( isset( $atts_raw['class'] ) && is_scalar( $atts_raw['class'] ) ) {
-			// Mehrere Klassen via sanitize_html_class einzeln verarbeiten ist
-			// out-of-scope - wir geben Raw an den Renderer, der sanitisiert.
-			$sanitized_atts['class'] = (string) $atts_raw['class'];
-		}
-		if ( isset( $atts_raw['section'] ) && is_scalar( $atts_raw['section'] ) ) {
-			$sanitized_atts['section'] = (string) $atts_raw['section'];
-		}
-		if ( isset( $atts_raw['cache'] ) && is_scalar( $atts_raw['cache'] ) ) {
-			// Boolean-ish Coercion: 'true','1','on' -> true; sonst false.
-			// Wir reichen den boolean-validierten String an den Renderer durch.
-			$cache_bool = filter_var(
-				(string) $atts_raw['cache'],
-				FILTER_VALIDATE_BOOLEAN,
-				FILTER_NULL_ON_FAILURE
-			);
-			if ( null !== $cache_bool ) {
-				$sanitized_atts['cache'] = $cache_bool ? '1' : '0';
-			}
-		}
-
-		// Unbekannte Atts auch durchreichen, damit Renderer sie in
-		// atts_rejected als "unknown att key" listet.
 		foreach ( $atts_raw as $k => $v ) {
 			$k_str = is_string( $k ) ? sanitize_key( $k ) : '';
 			if ( '' === $k_str ) {
 				continue;
 			}
-			if ( ! in_array( $k_str, $known_top_keys, true ) && is_scalar( $v ) ) {
-				$sanitized_atts[ $k_str ] = (string) $v;
+			if ( ! is_scalar( $v ) ) {
+				continue;
 			}
+			$sanitized_atts[ $k_str ] = $v;
 		}
 
 		// 5. Render.

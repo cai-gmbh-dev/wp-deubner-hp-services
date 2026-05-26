@@ -89,12 +89,756 @@ class DHPS_Preview_Renderer {
 	);
 
 	/**
-	 * Whitelist erlaubter Boolean-Att-Werte fuer `cache`.
+	 * Whitelist erlaubter Boolean-Att-Werte fuer `cache` (Legacy v0.15.4).
 	 *
-	 * @since 0.15.4
+	 * Seit v0.15.5 wird das Feld `cache` auf zwei verschiedene Arten interpretiert:
+	 * 1. Aus dem REST-Handler kommt es bereits boolean-normalisiert ('0'/'1'),
+	 *    weil dort filter_var( FILTER_VALIDATE_BOOLEAN ) angewendet wird.
+	 * 2. Im SERVICE_ATTS_SCHEMA wird `cache` als `type=int` (0..86400) modelliert,
+	 *    weil die zugrundeliegenden Shortcode-Handler den Wert via absint() als
+	 *    Cache-TTL in Sekunden interpretieren.
+	 *
+	 * Diese Konstante bleibt fuer Rueckwaerts-Kompatibilitaet der frueheren
+	 * boolean-Whitelist-Pruefung erhalten, wird aber von der neuen Validation-
+	 * Pipeline NICHT mehr verwendet.
+	 *
+	 * @since      0.15.4
+	 * @deprecated 0.15.5 Durch SERVICE_ATTS_SCHEMA + validate_att_value() ersetzt.
 	 * @var array<int,string>
 	 */
 	private const ALLOWED_CACHE_VALUES = array( '0', '1' );
+
+	/**
+	 * Service-Atts-Schema (v0.15.5 - autoritativ).
+	 *
+	 * Schema-Vertrag pro Att-Entry (siehe docs/architecture/23-ATTS-EDITOR-PLAN-v0155.md
+	 * Sektion 3, exakt 10 Felder, KEINE Aliases):
+	 *
+	 *   type        string  PFLICHT  Einer von 'string', 'int', 'bool', 'select'.
+	 *   default     scalar  PFLICHT  Default-Wert (passend zu type, niemals null).
+	 *   options     array   OPT      Bei type=select: Liste von {value, label}-Objekten.
+	 *   min         int     OPT      Bei type=int: untere Grenze (inkl.) - PFLICHT.
+	 *   max         int     OPT      Bei type=int: obere Grenze (inkl.) - PFLICHT.
+	 *   pattern     string  OPT      Bei type=string: PCRE-Regex (KEINE / / Delimiter).
+	 *   sanitize    string  OPT      Einer von 'text_field', 'html_class', 'key', 'csv_int'.
+	 *   group       string  PFLICHT  Einer von 'universal', 'service_specific'.
+	 *   label       string  OPT      UI-Label (Default = $att_name).
+	 *   description string  OPT      UI-Hilfe-Text.
+	 *
+	 * Atts-Inventar: NUR jene Atts, die in den Shortcode-Handlern (Service-Registry,
+	 * MAES-Modules, Steuertermine) TATSAECHLICH per shortcode_atts() definiert sind.
+	 * Wishlist-Atts aus dem User-Briefing (z.B. MIO/count, kategorie, start_date)
+	 * sind bewusst NICHT enthalten (erfordern Shortcode-Handler-Erweiterung in v0.16).
+	 *
+	 * Public, damit DHPS_Admin_REST + wp_localize_script darauf zugreifen koennen
+	 * (Backend-zu-Frontend-Bridge, dhpsAdminConfig.attsSchema).
+	 *
+	 * @since 0.15.5
+	 * @var array<string,array<string,array<string,mixed>>>
+	 */
+	public const SERVICE_ATTS_SCHEMA = array(
+
+		// -----------------------------------------------------------------
+		// 1. MIO - MI-Online Steuerrecht
+		// -----------------------------------------------------------------
+		'mio' => array(
+			'teasermodus' => array(
+				'type'    => 'select',
+				'default' => '',
+				'options' => array(
+					array( 'value' => '',  'label' => '(default)' ),
+					array( 'value' => '0', 'label' => 'Volle Liste' ),
+					array( 'value' => '1', 'label' => 'Nur Teaser' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'Teaser-Modus',
+			),
+			'filter' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'text_field',
+				'group'    => 'service_specific',
+				'label'    => 'Filter (Volltext)',
+			),
+			'variante' => array(
+				'type'    => 'select',
+				'default' => '',
+				'options' => array(
+					array( 'value' => '',              'label' => '(default)' ),
+					array( 'value' => 'tagesaktuell',  'label' => 'tagesaktuell' ),
+					array( 'value' => 'kategorisiert', 'label' => 'kategorisiert' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'Variante',
+			),
+			'modus' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'key',
+				'group'    => 'service_specific',
+				'label'    => 'API-Modus',
+			),
+			'st_kategorie' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'text_field',
+				'group'    => 'service_specific',
+				'label'    => 'Steuer-Kategorie',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 2. LXMIO - MI-Online Recht (identisches Att-Set wie MIO)
+		// -----------------------------------------------------------------
+		'lxmio' => array(
+			'teasermodus' => array(
+				'type'    => 'select',
+				'default' => '',
+				'options' => array(
+					array( 'value' => '',  'label' => '(default)' ),
+					array( 'value' => '0', 'label' => 'Volle Liste' ),
+					array( 'value' => '1', 'label' => 'Nur Teaser' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'Teaser-Modus',
+			),
+			'filter' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'text_field',
+				'group'    => 'service_specific',
+				'label'    => 'Filter (Volltext)',
+			),
+			'variante' => array(
+				'type'    => 'select',
+				'default' => '',
+				'options' => array(
+					array( 'value' => '',              'label' => '(default)' ),
+					array( 'value' => 'tagesaktuell',  'label' => 'tagesaktuell' ),
+					array( 'value' => 'kategorisiert', 'label' => 'kategorisiert' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'Variante',
+			),
+			'modus' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'key',
+				'group'    => 'service_specific',
+				'label'    => 'API-Modus',
+			),
+			'st_kategorie' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'text_field',
+				'group'    => 'service_specific',
+				'label'    => 'Rechts-Kategorie',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 3. MMB - Merkblaetter
+		// -----------------------------------------------------------------
+		'mmb' => array(
+			'id_merkblatt' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'text_field',
+				'pattern'  => '^[0-9]{0,12}$',
+				'group'    => 'service_specific',
+				'label'    => 'Merkblatt-ID',
+			),
+			'rubrik' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'text_field',
+				'group'    => 'service_specific',
+				'label'    => 'Rubrik',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 4. MIL - Infografiken (identisches Att-Set wie MMB)
+		// -----------------------------------------------------------------
+		'mil' => array(
+			'id_merkblatt' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'text_field',
+				'pattern'  => '^[0-9]{0,12}$',
+				'group'    => 'service_specific',
+				'label'    => 'Merkblatt-ID',
+			),
+			'rubrik' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'text_field',
+				'group'    => 'service_specific',
+				'label'    => 'Rubrik',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 5. TP - TaxPlain Videos
+		// -----------------------------------------------------------------
+		'tp' => array(
+			'teasermodus' => array(
+				'type'    => 'select',
+				'default' => '0',
+				'options' => array(
+					array( 'value' => '0', 'label' => 'Volle Video-Liste' ),
+					array( 'value' => '1', 'label' => 'Teaser-Modus' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'Teaser-Modus',
+			),
+			'einzelvideo' => array(
+				'type'    => 'int',
+				'default' => 0,
+				'min'     => 0,
+				'max'     => 999,
+				'group'   => 'service_specific',
+				'label'   => 'Einzelvideo (1-basiert, 0=alle)',
+			),
+			'videoliste' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'csv_int',
+				'pattern'  => '^[0-9,]{0,128}$',
+				'group'    => 'service_specific',
+				'label'    => 'Video-Indizes (CSV, z.B. 1,3,5)',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 6. TPT - TaxPlain Teaser
+		// -----------------------------------------------------------------
+		'tpt' => array(
+			'modus' => array(
+				'type'    => 'select',
+				'default' => '',
+				'options' => array(
+					array( 'value' => '',         'label' => '(Admin-Default)' ),
+					array( 'value' => 'standard', 'label' => 'standard' ),
+					array( 'value' => 'p',        'label' => 'p (nur Titelbild)' ),
+					array( 'value' => 't',        'label' => 't (nur Titel)' ),
+					array( 'value' => 'pt',       'label' => 'pt (Titel+Bild)' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'TPT-Modus',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 7. TC - Tax-Rechner (Wrapper, keine service-spezifischen Atts)
+		// -----------------------------------------------------------------
+		'tc' => array(
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 8. MAES - Meine Aerzteseite
+		// -----------------------------------------------------------------
+		'maes' => array(
+			'section' => array(
+				'type'    => 'select',
+				'default' => '',
+				'options' => array(
+					array( 'value' => '',             'label' => '(alle)' ),
+					array( 'value' => 'videos',       'label' => 'videos' ),
+					array( 'value' => 'merkblaetter', 'label' => 'merkblaetter' ),
+					array( 'value' => 'aktuelles',    'label' => 'aktuelles' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'Section',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 9. LP - Lexplain Videos
+		// -----------------------------------------------------------------
+		'lp' => array(
+			'videoliste' => array(
+				'type'     => 'string',
+				'default'  => '0',
+				'sanitize' => 'csv_int',
+				'pattern'  => '^[0-9,]{0,128}$',
+				'group'    => 'service_specific',
+				'label'    => 'Video-Index oder CSV-Liste',
+			),
+			'teasermodus' => array(
+				'type'    => 'select',
+				'default' => '0',
+				'options' => array(
+					array( 'value' => '0', 'label' => 'Volle Liste' ),
+					array( 'value' => '1', 'label' => 'Teaser-Modus' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'Teaser-Modus',
+			),
+			'show_teaser' => array(
+				'type'    => 'select',
+				'default' => '1',
+				'options' => array(
+					array( 'value' => '0', 'label' => 'Ohne Teaser' ),
+					array( 'value' => '1', 'label' => 'Mit Teaser' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'Teaser anzeigen',
+			),
+			'filter' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'text_field',
+				'group'    => 'service_specific',
+				'label'    => 'Filter (Volltext)',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 10. mio_termine - MIO Steuertermine (Sub-Shortcode)
+		// -----------------------------------------------------------------
+		'mio_termine' => array(
+			'count' => array(
+				'type'    => 'int',
+				'default' => 0,
+				'min'     => 0,
+				'max'     => 50,
+				'group'   => 'service_specific',
+				'label'   => 'Anzahl pro Monat (0=alle)',
+			),
+			'month' => array(
+				'type'    => 'select',
+				'default' => 'all',
+				'options' => array(
+					array( 'value' => 'current', 'label' => 'aktueller Monat' ),
+					array( 'value' => 'next',    'label' => 'naechster Monat' ),
+					array( 'value' => 'all',     'label' => 'alle' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'Monatsfilter',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'inline',  'label' => 'inline' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 11. maes_videos - MAES Videos (Sub-Shortcode)
+		// -----------------------------------------------------------------
+		'maes_videos' => array(
+			'columns' => array(
+				'type'    => 'int',
+				'default' => 2,
+				'min'     => 1,
+				'max'     => 4,
+				'group'   => 'service_specific',
+				'label'   => 'Spalten',
+			),
+			'einzelvideo' => array(
+				'type'    => 'int',
+				'default' => 0,
+				'min'     => 0,
+				'max'     => 999,
+				'group'   => 'service_specific',
+				'label'   => 'Einzelvideo (1-basiert, 0=alle)',
+			),
+			'videoliste' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'csv_int',
+				'pattern'  => '^[0-9,]{0,128}$',
+				'group'    => 'service_specific',
+				'label'    => 'Video-Indizes (CSV)',
+			),
+			'lazy_count' => array(
+				'type'    => 'int',
+				'default' => 0,
+				'min'     => 0,
+				'max'     => 50,
+				'group'   => 'service_specific',
+				'label'   => 'Lazy-Load initial sichtbar',
+			),
+			'lazy_mode' => array(
+				'type'    => 'select',
+				'default' => 'manual',
+				'options' => array(
+					array( 'value' => 'manual', 'label' => 'manual' ),
+					array( 'value' => 'auto',   'label' => 'auto' ),
+				),
+				'group'   => 'service_specific',
+				'label'   => 'Lazy-Trigger',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 12. maes_merkblaetter - MAES Merkblaetter (Sub-Shortcode)
+		// -----------------------------------------------------------------
+		'maes_merkblaetter' => array(
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+
+		// -----------------------------------------------------------------
+		// 13. maes_aktuelles - MAES Aktuelles (Sub-Shortcode)
+		// -----------------------------------------------------------------
+		'maes_aktuelles' => array(
+			'columns' => array(
+				'type'    => 'int',
+				'default' => 2,
+				'min'     => 1,
+				'max'     => 4,
+				'group'   => 'service_specific',
+				'label'   => 'Spalten',
+			),
+			'layout' => array(
+				'type'    => 'select',
+				'default' => 'default',
+				'options' => array(
+					array( 'value' => 'default', 'label' => 'default' ),
+					array( 'value' => 'card',    'label' => 'card' ),
+					array( 'value' => 'compact', 'label' => 'compact' ),
+				),
+				'group'   => 'universal',
+				'label'   => 'Layout',
+			),
+			'class' => array(
+				'type'     => 'string',
+				'default'  => '',
+				'sanitize' => 'html_class',
+				'pattern'  => '^[a-zA-Z0-9_\- ]{0,64}$',
+				'group'    => 'universal',
+				'label'    => 'CSS-Klasse',
+			),
+			'cache' => array(
+				'type'    => 'int',
+				'default' => 3600,
+				'min'     => 0,
+				'max'     => 86400,
+				'group'   => 'universal',
+				'label'   => 'Cache-TTL (s)',
+			),
+		),
+	);
 
 	/**
 	 * Optionaler Cache-Stats-Service (zur Cache-Hit-Probe).
@@ -136,81 +880,65 @@ class DHPS_Preview_Renderer {
 	public function render( string $service, array $atts = array() ): array {
 		$start = microtime( true );
 
-		// 1. Atts validieren + reconstructed Shortcode bauen.
+		// 1. Atts validieren via SERVICE_ATTS_SCHEMA (v0.15.5).
+		//    Pipeline:
+		//      - Lookup im Schema fuer den Service.
+		//      - Pro Att: type-cast + bounds/options/pattern-Check + sanitize.
+		//      - Unbekannte Keys -> atts_rejected mit reason='unknown att key'
+		//        (bzw. 'not allowed for service' wenn das Att im Schema eines
+		//        anderen Service existiert, hier aber nicht).
 		$atts_applied   = array();
 		$atts_rejected  = array();
 		$shortcode_atts = '';
 
-		if ( isset( $atts['layout'] ) ) {
-			$layout = (string) $atts['layout'];
-			if ( in_array( $layout, self::ALLOWED_LAYOUTS, true ) ) {
-				$atts_applied['layout'] = $layout;
-				$shortcode_atts        .= ' layout="' . esc_attr( $layout ) . '"';
-			} else {
-				$atts_rejected['layout'] = 'value not in whitelist';
+		$schema = isset( self::SERVICE_ATTS_SCHEMA[ $service ] )
+			? self::SERVICE_ATTS_SCHEMA[ $service ]
+			: array();
+
+		// section-Sonderfall (BC v0.15.4): wenn section uebergeben aber Service
+		// ist kein maes/maes_*, dann reject mit 'only allowed for maes'. Sonst
+		// laeuft section ueber den regulaeren select-Pfad.
+		$is_maes_family = ( 'maes' === $service )
+			|| ( isset( self::SUB_SHORTCODE_PARENTS[ $service ] )
+				&& 'maes' === self::SUB_SHORTCODE_PARENTS[ $service ] );
+
+		foreach ( $atts as $key => $raw ) {
+			$key_str = (string) $key;
+
+			// Sonderfall section fuer Nicht-MAES (BC v0.15.4-Reason-String).
+			if ( 'section' === $key_str && ! $is_maes_family ) {
+				$atts_rejected[ $key_str ] = 'only allowed for maes';
+				continue;
 			}
-		}
 
-		if ( isset( $atts['class'] ) ) {
-			$class_raw   = (string) $atts['class'];
-			$class_clean = sanitize_html_class( $class_raw );
-			// sanitize_html_class kann Strings mit Spaces nicht verarbeiten -
-			// fallback: leere Klasse rejecten, sonst trimmen.
-			if ( '' === $class_raw ) {
-				// Leerer Wert wird nicht in Shortcode aufgenommen, aber auch
-				// nicht rejected.
-				$atts_applied['class'] = '';
-			} elseif ( '' === $class_clean ) {
-				$atts_rejected['class'] = 'invalid html-class chars';
-			} else {
-				$atts_applied['class'] = $class_clean;
-				$shortcode_atts       .= ' class="' . esc_attr( $class_clean ) . '"';
+			// Schema-Lookup: wenn Att fuer diesen Service nicht definiert ist,
+			// pruefen wir ob es in einem ANDEREN Service-Schema existiert -
+			// dann ist es 'not allowed for service', sonst 'unknown att key'.
+			if ( ! isset( $schema[ $key_str ] ) ) {
+				$atts_rejected[ $key_str ] = $this->is_known_att_anywhere( $key_str )
+					? 'not allowed for service'
+					: 'unknown att key';
+				continue;
 			}
-		}
 
-		if ( isset( $atts['section'] ) ) {
-			$section_raw = (string) $atts['section'];
-			// v0.15.4: section ist auch fuer maes_*-Sub-Shortcodes erlaubt
-			// (sie haengen logisch am MAES-Parent).
-			$section_allowed = ( 'maes' === $service )
-				|| ( isset( self::SUB_SHORTCODE_PARENTS[ $service ] )
-					&& 'maes' === self::SUB_SHORTCODE_PARENTS[ $service ] );
+			$def       = $schema[ $key_str ];
+			$validated = self::validate_att_value( $raw, $def );
 
-			if ( ! $section_allowed ) {
-				$atts_rejected['section'] = 'only allowed for maes';
-			} elseif ( '' === $section_raw ) {
-				$atts_applied['section'] = '';
-			} else {
-				$section_clean = sanitize_key( $section_raw );
-				if ( in_array( $section_clean, self::ALLOWED_MAES_SECTIONS, true ) ) {
-					$atts_applied['section'] = $section_clean;
-					$shortcode_atts         .= ' section="' . esc_attr( $section_clean ) . '"';
-				} else {
-					$atts_rejected['section'] = 'value not in maes whitelist';
-				}
+			if ( false === $validated['ok'] ) {
+				$atts_rejected[ $key_str ] = $validated['reason'];
+				continue;
 			}
-		}
 
-		// v0.15.4: `cache`-Att (Boolean) wird durchgereicht, damit Sub-Shortcodes
-		// optional ohne Cache rendern koennen. Atts-Whitelist im REST-Handler
-		// hat den Wert bereits auf '0' / '1' normalisiert.
-		if ( isset( $atts['cache'] ) ) {
-			$cache_raw = (string) $atts['cache'];
-			if ( in_array( $cache_raw, self::ALLOWED_CACHE_VALUES, true ) ) {
-				$atts_applied['cache'] = $cache_raw;
-				// Wir reichen den boolean-Wert als Shortcode-Att durch, damit
-				// die jeweiligen Shortcode-Handler ihn auswerten koennen.
-				$shortcode_atts .= ' cache="' . esc_attr( $cache_raw ) . '"';
-			} else {
-				$atts_rejected['cache'] = 'value not boolean (0|1)';
-			}
-		}
+			$value = $validated['value'];
 
-		// Unbekannte atts-Keys silent in rejected aufnehmen.
-		$known_keys = array( 'layout', 'class', 'section', 'cache' );
-		foreach ( $atts as $key => $val ) {
-			if ( ! in_array( $key, $known_keys, true ) && ! isset( $atts_rejected[ $key ] ) ) {
-				$atts_rejected[ (string) $key ] = 'unknown att key';
+			// Leerer string-Wert: in atts_applied behalten (BC v0.15.4 fuer
+			// class=''), aber NICHT in den Shortcode-String aufnehmen.
+			$is_empty_string = ( 'string' === $def['type'] && '' === $value );
+
+			$atts_applied[ $key_str ] = $value;
+
+			if ( ! $is_empty_string ) {
+				$shortcode_atts .= ' ' . $key_str . '="' . esc_attr( (string) $value ) . '"';
 			}
 		}
 
@@ -249,6 +977,149 @@ class DHPS_Preview_Renderer {
 			'api_cache_hit'  => (bool) $api_cache_hit,
 			'render_time_ms' => $render_time_ms,
 		);
+	}
+
+	/**
+	 * Validiert einen Att-Wert gegen ein Schema-Entry (v0.15.5).
+	 *
+	 * Reject-Reasons (autoritativ, siehe 23-ATTS-EDITOR-PLAN-v0155 Sektion 3.3):
+	 *   - 'value not in whitelist'        (type=select, value nicht in options)
+	 *   - 'invalid html-class chars'      (type=string, sanitize=html_class strippt alles)
+	 *   - 'value not boolean (0|1)'       (type=bool, FILTER_VALIDATE_BOOLEAN scheitert)
+	 *   - 'out of bounds (min=N, max=M)'  (type=int, ausserhalb min/max)
+	 *   - 'invalid type (expected int)'   (type=int, Wert nicht numerisch)
+	 *   - 'pattern mismatch'              (type=string mit pattern, Regex matched nicht)
+	 *
+	 * Return-Form:
+	 *   array{ok: bool, value?: mixed, reason?: string}
+	 *
+	 * @since 0.15.5
+	 *
+	 * @param mixed $raw Roher Att-Wert (scalar).
+	 * @param array $def Schema-Definition (siehe SERVICE_ATTS_SCHEMA).
+	 *
+	 * @return array{ok: bool, value?: mixed, reason?: string}
+	 */
+	private static function validate_att_value( $raw, array $def ): array {
+		$type = isset( $def['type'] ) ? (string) $def['type'] : 'string';
+
+		switch ( $type ) {
+
+			case 'string':
+				$val      = is_scalar( $raw ) ? (string) $raw : '';
+				$sanitize = isset( $def['sanitize'] ) ? (string) $def['sanitize'] : '';
+
+				if ( 'html_class' === $sanitize ) {
+					// sanitize_html_class strippt Spaces+Sonderzeichen, aber wir
+					// erlauben Mehrfach-Klassen ('foo bar') - dafuer das pattern.
+					// Erst Pattern (wenn vorhanden), DANN sanitize_html_class
+					// auf das erste Wort. Bei leerem Input: durchwinken.
+					if ( '' === $val ) {
+						return array( 'ok' => true, 'value' => '' );
+					}
+					if ( isset( $def['pattern'] ) ) {
+						$re = '/' . $def['pattern'] . '/';
+						if ( ! preg_match( $re, $val ) ) {
+							return array( 'ok' => false, 'reason' => 'pattern mismatch' );
+						}
+					}
+					// sanitize_html_class fuer Multi-Class: pro Token sanitisieren,
+					// leere Tokens raus. Wenn ALLES leer -> invalid html-class chars.
+					$tokens = preg_split( '/\s+/', trim( $val ) );
+					$clean_tokens = array();
+					foreach ( $tokens as $tok ) {
+						$c = sanitize_html_class( $tok );
+						if ( '' !== $c ) {
+							$clean_tokens[] = $c;
+						}
+					}
+					if ( empty( $clean_tokens ) ) {
+						return array( 'ok' => false, 'reason' => 'invalid html-class chars' );
+					}
+					return array( 'ok' => true, 'value' => implode( ' ', $clean_tokens ) );
+				}
+
+				if ( 'text_field' === $sanitize ) {
+					$val = sanitize_text_field( $val );
+				} elseif ( 'key' === $sanitize ) {
+					$val = sanitize_key( $val );
+				} elseif ( 'csv_int' === $sanitize ) {
+					// Leerer Wert OK (BC: videoliste leer = "nicht filtern").
+					if ( '' !== $val && ! preg_match( '/^[0-9,]{0,128}$/', $val ) ) {
+						return array( 'ok' => false, 'reason' => 'pattern mismatch' );
+					}
+				}
+
+				if ( isset( $def['pattern'] ) ) {
+					$re = '/' . $def['pattern'] . '/';
+					if ( ! preg_match( $re, $val ) ) {
+						return array( 'ok' => false, 'reason' => 'pattern mismatch' );
+					}
+				}
+
+				return array( 'ok' => true, 'value' => $val );
+
+			case 'int':
+				if ( ! is_numeric( $raw ) ) {
+					return array( 'ok' => false, 'reason' => 'invalid type (expected int)' );
+				}
+				$val = (int) $raw;
+				$min = isset( $def['min'] ) ? (int) $def['min'] : PHP_INT_MIN;
+				$max = isset( $def['max'] ) ? (int) $def['max'] : PHP_INT_MAX;
+				if ( $val < $min || $val > $max ) {
+					return array(
+						'ok'     => false,
+						'reason' => sprintf( 'out of bounds (min=%d, max=%d)', $min, $max ),
+					);
+				}
+				return array( 'ok' => true, 'value' => $val );
+
+			case 'bool':
+				$b = filter_var( $raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+				if ( null === $b ) {
+					return array( 'ok' => false, 'reason' => 'value not boolean (0|1)' );
+				}
+				return array( 'ok' => true, 'value' => $b ? '1' : '0' );
+
+			case 'select':
+				$allowed = array();
+				if ( isset( $def['options'] ) && is_array( $def['options'] ) ) {
+					foreach ( $def['options'] as $opt ) {
+						if ( is_array( $opt ) && isset( $opt['value'] ) ) {
+							$allowed[] = (string) $opt['value'];
+						}
+					}
+				}
+				$val = is_scalar( $raw ) ? (string) $raw : '';
+				if ( ! in_array( $val, $allowed, true ) ) {
+					return array( 'ok' => false, 'reason' => 'value not in whitelist' );
+				}
+				return array( 'ok' => true, 'value' => $val );
+		}
+
+		// Unbekannter type im Schema (sollte nie vorkommen, Defense-in-Depth).
+		return array( 'ok' => false, 'reason' => 'unknown att key' );
+	}
+
+	/**
+	 * Prueft, ob ein Att-Key in IRGENDEINEM Service-Schema existiert.
+	 *
+	 * Wird genutzt, um die Reject-Reason zu differenzieren:
+	 *   - Existiert das Att irgendwo im Plugin -> 'not allowed for service'.
+	 *   - Existiert es nirgends -> 'unknown att key'.
+	 *
+	 * @since 0.15.5
+	 *
+	 * @param string $att_key Att-Key.
+	 * @return bool true, wenn Key in mindestens einem Service-Schema vorkommt.
+	 */
+	private function is_known_att_anywhere( string $att_key ): bool {
+		foreach ( self::SERVICE_ATTS_SCHEMA as $svc_schema ) {
+			if ( isset( $svc_schema[ $att_key ] ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

@@ -30,10 +30,22 @@ class DHPS_Health_Collector {
 	 * Bewusst hier dupliziert (DHPS_Admin_REST haelt die kanonische Liste),
 	 * damit der Collector unabhaengig instanziierbar bleibt.
 	 *
+	 * Seit v0.15.5 enthaelt die Liste auch die 4 Sub-Shortcodes
+	 * (mio_termine, maes_videos, maes_merkblaetter, maes_aktuelles), damit
+	 * collect_all() vollstaendige Health-Records inkl. Sub-Shortcodes liefert.
+	 * Sub-Shortcodes erben Auth-Status + Branding + API-URL vom Parent
+	 * (Caveat C1, siehe DHPS_Preview_Renderer::SUB_SHORTCODE_PARENTS).
+	 *
 	 * @since 0.15.0
+	 * @since 0.15.5 Sub-Shortcodes (mio_termine, maes_videos, maes_merkblaetter, maes_aktuelles).
 	 * @var array<int,string>
 	 */
-	private const SERVICES = array( 'mio', 'lxmio', 'mmb', 'mil', 'tp', 'tpt', 'tc', 'maes', 'lp' );
+	private const SERVICES = array(
+		// Hauptservices (seit v0.15.0).
+		'mio', 'lxmio', 'mmb', 'mil', 'tp', 'tpt', 'tc', 'maes', 'lp',
+		// Sub-Shortcodes (seit v0.15.5, Caveat C1).
+		'mio_termine', 'maes_videos', 'maes_merkblaetter', 'maes_aktuelles',
+	);
 
 	/**
 	 * TTL fuer den Availability-Probe-Cache in Sekunden.
@@ -101,22 +113,62 @@ class DHPS_Health_Collector {
 	/**
 	 * Sammelt Health-Daten fuer einen einzelnen Service.
 	 *
-	 * @since 0.15.0
+	 * Seit v0.15.5 (Caveat C1): Bei Sub-Shortcodes (mio_termine, maes_videos,
+	 * maes_merkblaetter, maes_aktuelles) werden alle internen Lookups
+	 * (Label, OTA-Status, API-URL, Branding) gegen den Parent-Service
+	 * aufgeloest. Der Output behaelt aber das Original-Slug, damit die
+	 * UI den Sub-Shortcode korrekt identifiziert. Zusaetzlich kommen
+	 * zwei neue Felder:
+	 *   - parent_service   string  Parent-Slug (z.B. 'maes' fuer 'maes_videos').
+	 *                              Bei Hauptservices: identisch mit slug.
+	 *   - is_sub_shortcode bool    true wenn Sub-Shortcode (Parent != slug).
 	 *
-	 * @param string $service Service-Slug (z.B. 'mio').
+	 * Diese Felder sind ADDITIV (BC-sicher) - bestehende ServiceHealthCard
+	 * ignoriert unbekannte Felder defensiv.
+	 *
+	 * @since 0.15.0
+	 * @since 0.15.5 Sub-Shortcode-Support (Caveat C1).
+	 *
+	 * @param string $service Service-Slug (z.B. 'mio', 'maes_videos').
 	 *
 	 * @return array<string,mixed> Health-Record gemaess Schema.
 	 */
 	public function collect_for( string $service ): array {
 		$service = sanitize_key( $service );
 
-		$avail_cache_key = $this->get_avail_cache_key( $service );
+		// Sub-Shortcode-Resolution: lookup via SUB_SHORTCODE_PARENTS.
+		// Falls Klasse nicht geladen ist (Defensive), Fallback auf $service.
+		$parent_slug = $service;
+		if ( class_exists( 'DHPS_Preview_Renderer' ) ) {
+			$sub_parents = DHPS_Preview_Renderer::SUB_SHORTCODE_PARENTS;
+			if ( isset( $sub_parents[ $service ] ) ) {
+				$parent_slug = $sub_parents[ $service ];
+			}
+		}
+		$is_sub = ( $parent_slug !== $service );
+
+		// Availability-Cache: gegen Parent (sonst doppelt geprueft je Sub).
+		$avail_cache_key = $this->get_avail_cache_key( $parent_slug );
 		$cached_at       = (int) get_option( $avail_cache_key . '_ts', 0 );
 
-		$label     = $this->get_label( $service );
-		$ota_set   = $this->is_ota_set( $service );
-		$available = $this->is_available_cached( $service );
-		$api_url   = $this->get_api_url( $service );
+		// Alle internen Lookups gegen $parent_slug, Output behaelt $service.
+		$label     = $this->get_label( $parent_slug );
+		$ota_set   = $this->is_ota_set( $parent_slug );
+		$available = $this->is_available_cached( $parent_slug );
+		$api_url   = $this->get_api_url( $parent_slug );
+
+		// Sub-Shortcode-Label-Suffix fuer UI-Klarheit.
+		if ( $is_sub ) {
+			$sub_labels = array(
+				'mio_termine'       => 'MIO Termine (Sub)',
+				'maes_videos'       => 'MAES Videos (Sub)',
+				'maes_merkblaetter' => 'MAES Merkblaetter (Sub)',
+				'maes_aktuelles'    => 'MAES Aktuelles (Sub)',
+			);
+			if ( isset( $sub_labels[ $service ] ) ) {
+				$label = $sub_labels[ $service ];
+			}
+		}
 
 		// QA-Fix v0.15.0 Critical-2: Alias-Keys fuer F2-Frontend (slug/name/ota_configured/api_reachable/endpoint).
 		// F1+F2 wurden parallel entwickelt und haben unterschiedliche Schluesselnamen gewaehlt -
@@ -124,13 +176,15 @@ class DHPS_Health_Collector {
 		return array(
 			'service'             => $service,
 			'slug'                => $service,            // F2-Alias
+			'parent_service'      => $parent_slug,        // NEU v0.15.5 (C1)
+			'is_sub_shortcode'    => $is_sub,             // NEU v0.15.5 (C1)
 			'label'               => $label,
 			'name'                => $label,              // F2-Alias
 			'ota_set'             => $ota_set,
 			'ota_configured'      => $ota_set,            // F2-Alias
-			'ota_preview'         => $this->get_ota_preview( $service ),
-			'ota_key'             => $this->get_ota_option_key( $service ),
-			'branding'            => $this->get_branding( $service ),
+			'ota_preview'         => $this->get_ota_preview( $parent_slug ),
+			'ota_key'             => $this->get_ota_option_key( $parent_slug ),
+			'branding'            => $this->get_branding( $parent_slug ),
 			'available'           => $available,
 			'api_reachable'       => $available,          // F2-Alias
 			'available_cached_at' => $cached_at,

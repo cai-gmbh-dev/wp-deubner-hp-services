@@ -90,6 +90,28 @@ Content-Security-Policy:
     form-action 'self';
 ```
 
+### Admin-Kontext: zusaetzliche `frame-src about:` (seit v0.15.3)
+
+Wenn CSP auch fuer `/wp-admin/*` greift und Live-Preview genutzt wird,
+muss `frame-src` um `about:` erweitert werden (iframe-srcdoc-Origin):
+
+```
+Content-Security-Policy:
+    default-src 'self';
+    script-src 'self' 'unsafe-eval';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' https://*.deubner-online.de data:;
+    connect-src 'self';
+    font-src 'self' data:;
+    frame-src 'self' about:;
+    base-uri 'self';
+    form-action 'self';
+```
+
+Ohne `about:` in `frame-src` zeigt der Browser den Live-Preview-iframe
+NICHT an (DevTools-Console-Error: "Refused to frame ... because it
+violates Content-Security-Policy"). Caveat C3 v0.15.4 GELOEST in v0.15.5.
+
 Anpassungen je nach Site-Kontext (z.B. fuer Elementor-Editor weitere
 Domains noetig, fuer YouTube-Video-Embeds in TP/MAES `frame-src` erweitern).
 

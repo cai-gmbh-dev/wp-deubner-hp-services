@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.15.4
+ * Version: 0.15.5
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -19,7 +19,7 @@
  * Developer Author: Kai R. Emde
  *
  * @package Deubner Homepage-Service
- * @version 0.15.4
+ * @version 0.15.5
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.15.4' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.15.5' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -55,7 +55,7 @@ define( 'DEUBNER_HP_SERVICES_API_BASE', 'https://www.deubner-online.de/' );
 /** @var string Nonce-Action fuer alle Admin-Formulare. */
 define( 'DEUBNER_HP_SERVICES_NONCE_ACTION', 'dhps_save_settings' );
 
-/** @var string Alpine.js-Vendor-Version (lokal gebundled, seit 0.15.4). */
+/** @var string Alpine.js-Vendor-Version (lokal gebundled, seit 0.15.5). */
 if ( ! defined( 'DHPS_ALPINE_VERSION' ) ) {
     define( 'DHPS_ALPINE_VERSION', '3.14.9' );
 }
@@ -96,7 +96,7 @@ spl_autoload_register( function ( $class_name ) {
 
 /*
 |--------------------------------------------------------------------------
-| Component-System-Helpers (v0.15.4)
+| Component-System-Helpers (v0.15.5)
 |--------------------------------------------------------------------------
 |
 | Die Klasse DHPS_Component_Registry wird via Autoloader geladen.
@@ -276,18 +276,18 @@ function dhps_init() {
     $maes_parser = new DHPS_MAES_Parser();
     DHPS_Parser_Registry::register( 'maes', $maes_parser );
 
-    // 3b. Component-Registry: UI-Bausteine registrieren (v0.15.4).
+    // 3b. Component-Registry: UI-Bausteine registrieren (v0.15.5).
     dhps_register_components();
 
     // 4. AJAX-Proxy registrieren (serverseitige News-Anfragen).
     $ajax_proxy = new DHPS_AJAX_Proxy( $api, $cache );
     $ajax_proxy->register();
 
-    // 4b. MMB-Lazy-Akkordeon AJAX-Endpoint (v0.15.4).
+    // 4b. MMB-Lazy-Akkordeon AJAX-Endpoint (v0.15.5).
     $mmb_ajax = new DHPS_MMB_AJAX_Handler( $client, $cache );
     $mmb_ajax->register();
 
-    // 4c. Admin-Dashboard REST-API (v0.15.4): Service-Health, API-Test, Cache-Stats.
+    // 4c. Admin-Dashboard REST-API (v0.15.5): Service-Health, API-Test, Cache-Stats.
     // Klassen werden vom Autoloader geladen (includes/class-dhps-{health-collector,cache-stats,admin-rest}.php).
     $health_collector = new DHPS_Health_Collector( $client, $cache );
     $cache_stats      = new DHPS_Cache_Stats();
@@ -308,7 +308,7 @@ function dhps_init() {
     new DHPS_Steuertermine( $client, $cache );
     new DHPS_MAES_Modules( $client, $cache );
 
-    // 7b. TPT-Modules-Layer (v0.15.4): reichert $data um Admin-Texte an,
+    // 7b. TPT-Modules-Layer (v0.15.5): reichert $data um Admin-Texte an,
     // damit Templates keine get_option-Reads mehr brauchen.
     new DHPS_TPT_Modules();
 
@@ -390,7 +390,7 @@ function dhps_enqueue_frontend_styles() {
     wp_enqueue_style( 'dhps-frontend-css' );
 
     // Component-Stylesheet (Shared Components - Skeleton, EmptyState, LazyImage, Accordion, ...).
-    // Seit 0.15.4. Wird sofort geladen, weil die Components ueberall potentiell verwendet werden.
+    // Seit 0.15.5. Wird sofort geladen, weil die Components ueberall potentiell verwendet werden.
     wp_register_style(
         'dhps-components-css',
         DEUBNER_HP_SERVICES_URL . 'css/dhps-components.css',
@@ -400,7 +400,7 @@ function dhps_enqueue_frontend_styles() {
     );
     wp_enqueue_style( 'dhps-components-css' );
 
-    // Elementor-Atomic-Token-Bridge (seit 0.15.4, optional, Default aus).
+    // Elementor-Atomic-Token-Bridge (seit 0.15.5, optional, Default aus).
     // Bridget generische UI-Tokens an Elementor-Globals; Brand-Tokens bleiben isoliert.
     wp_register_style(
         'dhps-elementor-bridge-css',
@@ -441,11 +441,11 @@ function dhps_enqueue_frontend_styles() {
         true
     );
 
-    // MAES-Aktuelles JS-Block in v0.13.1 -> v0.15.4 ausgelagert,
-    // in v0.15.4 obsolet: ContentCard's Alpine-Toggle uebernimmt die
+    // MAES-Aktuelles JS-Block in v0.13.1 -> v0.15.5 ausgelagert,
+    // in v0.15.5 obsolet: ContentCard's Alpine-Toggle uebernimmt die
     // Akkordeon-Funktion. File geloescht, Enqueue entfernt.
 
-    // Alpine.js v3.x Vendor (lokal gebundled, defer, conditional enqueue, seit 0.15.4).
+    // Alpine.js v3.x Vendor (lokal gebundled, defer, conditional enqueue, seit 0.15.5).
     wp_register_script(
         'dhps-alpinejs-vendor',
         DEUBNER_HP_SERVICES_URL . 'public/js/vendor/alpinejs-3.14.x.min.js',
@@ -475,7 +475,7 @@ function dhps_enqueue_frontend_styles() {
 
 /*
 |--------------------------------------------------------------------------
-| Component-Registry-Bootstrap (v0.15.4)
+| Component-Registry-Bootstrap (v0.15.5)
 |--------------------------------------------------------------------------
 |
 | Registriert alle Plugin-internen UI-Components. Spaetere Specialists
@@ -486,7 +486,7 @@ function dhps_enqueue_frontend_styles() {
 /**
  * Registriert die Plugin-Components in der Component-Registry.
  *
- * @since 0.15.4
+ * @since 0.15.5
  *
  * @return void
  */
@@ -550,7 +550,7 @@ function dhps_register_components() {
             'collapsible' => false,
             'class'       => '',
             'service'     => '',
-            'data_attrs'  => array(),  // seit 0.15.4 - data-* fuer Player-Selectoren etc.
+            'data_attrs'  => array(),  // seit 0.15.5 - data-* fuer Player-Selectoren etc.
         ),
         'stateful'        => true,
         'requires_alpine' => 'conditional',
@@ -609,14 +609,14 @@ function dhps_register_components() {
      * Action: erlaubt Dritten (Specialists F5-F7, Theme, andere Plugins),
      * eigene Components zu registrieren.
      *
-     * @since 0.15.4
+     * @since 0.15.5
      */
     do_action( 'dhps_register_components' );
 }
 
 /*
 |--------------------------------------------------------------------------
-| Alpine.js Conditional Loading (v0.15.4)
+| Alpine.js Conditional Loading (v0.15.5)
 |--------------------------------------------------------------------------
 |
 | Alpine wird nur geladen, wenn ein DHPS-Shortcode auf der aktuellen Seite
@@ -628,7 +628,7 @@ function dhps_register_components() {
  * Frueh-Erkennung: durchsucht den Post-Content nach DHPS-Shortcodes
  * und setzt das Bedarf-Flag.
  *
- * @since 0.15.4
+ * @since 0.15.5
  *
  * @return void
  */
@@ -666,7 +666,7 @@ add_action( 'wp', 'dhps_detect_alpine_need', 20 );
  * Setzt Flag oder enqueued direkt, je nachdem ob wp_enqueue_scripts
  * schon gelaufen ist.
  *
- * @since 0.15.4
+ * @since 0.15.5
  *
  * @return void
  */
@@ -684,7 +684,7 @@ function dhps_request_alpine() {
 /**
  * Enqueued Alpine sofort (idempotent).
  *
- * @since 0.15.4
+ * @since 0.15.5
  *
  * @return void
  */
@@ -699,7 +699,7 @@ function dhps_enqueue_alpine_now() {
 /**
  * Footer-Catchup: enqueued Alpine wenn das Bedarf-Flag gesetzt wurde.
  *
- * @since 0.15.4
+ * @since 0.15.5
  *
  * @return void
  */
@@ -717,7 +717,7 @@ add_action( 'wp_enqueue_scripts', 'dhps_maybe_enqueue_alpine', 20 );
  * Components auf der Seite gerendert wurde. Greift auf das mark_used()
  * Pattern der DHPS_Component_Registry zurueck.
  *
- * @since 0.15.4
+ * @since 0.15.5
  *
  * @return void
  */
@@ -740,10 +740,10 @@ add_action( 'wp_enqueue_scripts', 'dhps_maybe_enqueue_components_js', 30 );
 /**
  * Registriert die Plugin-Optionen via WP-Settings-API (Defense-in-Depth, Sanitize-Callbacks).
  *
- * Seit 0.15.4. Aktuell nur Bridge-Toggle, weitere Optionen wandern bei
- * Gelegenheit (z.B. v0.15.4 Admin-Dashboard) hierher.
+ * Seit 0.15.5. Aktuell nur Bridge-Toggle, weitere Optionen wandern bei
+ * Gelegenheit (z.B. v0.15.5 Admin-Dashboard) hierher.
  *
- * @since 0.15.4
+ * @since 0.15.5
  *
  * @return void
  */
@@ -766,7 +766,7 @@ add_action( 'admin_init', 'dhps_register_options' );
 /**
  * Setzt das defer-Attribut auf Alpine-Scripts.
  *
- * @since 0.15.4
+ * @since 0.15.5
  *
  * @param string $tag    Original Script-Tag-HTML.
  * @param string $handle Script-Handle.
@@ -787,7 +787,7 @@ add_filter( 'script_loader_tag', 'dhps_defer_alpine_scripts', 10, 2 );
 
 /*
 |--------------------------------------------------------------------------
-| Admin-Dashboard React-Bundle (v0.15.4)
+| Admin-Dashboard React-Bundle (v0.15.5)
 |--------------------------------------------------------------------------
 |
 | Laedt das React-basierte Dashboard auf der dhps_dashboard-Page.
@@ -798,7 +798,7 @@ add_filter( 'script_loader_tag', 'dhps_defer_alpine_scripts', 10, 2 );
 /**
  * Enqueued das Admin-Dashboard-React-Bundle.
  *
- * @since 0.15.4
+ * @since 0.15.5
  *
  * @param string $hook_suffix Aktueller Admin-Page-Hook.
  * @return void
@@ -807,7 +807,7 @@ function dhps_enqueue_admin_dashboard( $hook_suffix ) {
     // Hook-Gate: nur auf der dhps_dashboard-Page.
     // dhps_dashboard ist via add_menu_page (Top-Level) ODER add_submenu_page registriert -
     // wir akzeptieren beide moeglichen Hook-Suffixe.
-    // QA-Fix v0.15.4 Critical-1: vorheriger Hard-Code 'toplevel_page_dhps_dashboard'
+    // QA-Fix v0.15.5 Critical-1: vorheriger Hard-Code 'toplevel_page_dhps_dashboard'
     // griff nicht im realen Submenu-Setup (deubner-verlag_page_dhps_dashboard).
     $is_dashboard_page = ( false !== strpos( (string) $hook_suffix, 'dhps_dashboard' ) );
     if ( ! $is_dashboard_page ) {
@@ -834,6 +834,10 @@ function dhps_enqueue_admin_dashboard( $hook_suffix ) {
     // Bridge fuer Frontend: localize einige Config-Werte (REST-Namespace, Nonce).
     // Schluesselnamen muessen mit dhps-admin-react.js synchron sein (SEC-Audit M-8.1):
     // JS erwartet restUrl + restNonce, NICHT restBase + nonce.
+    // wp_localize_script Bridge (Caveat C4 v0.15.5, erweitert in v0.15.5):
+    // Zusaetzlich `services`, `attsSchema`, `subShortcodeParents` fuer React-
+    // Atts-Editor (Ticket 7). Frontend liest aus dhpsAdminConfig statt eigener
+    // Konstante - vermeidet Schema-Drift zwischen PHP-Backend und React-Frontend.
     wp_localize_script(
         'dhps-admin-react',
         'dhpsAdminConfig',
@@ -841,6 +845,10 @@ function dhps_enqueue_admin_dashboard( $hook_suffix ) {
             'restUrl'    => esc_url_raw( rest_url( 'dhps/v1/' ) ),
             'restNonce'  => wp_create_nonce( 'wp_rest' ),
             'i18nDomain' => 'deubner_hp_services',
+            // Seit v0.15.5 (Caveat C4 + Ticket 7):
+            'services'             => DHPS_Admin_REST::ALLOWED_SERVICES,
+            'attsSchema'           => DHPS_Preview_Renderer::SERVICE_ATTS_SCHEMA,
+            'subShortcodeParents'  => DHPS_Preview_Renderer::SUB_SHORTCODE_PARENTS,
         )
     );
 

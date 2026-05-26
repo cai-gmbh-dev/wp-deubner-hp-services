@@ -72,6 +72,7 @@
 	var Text = components.__experimentalText || components.Text || 'span';
 	var SelectControl = components.SelectControl;
 	var TextControl = components.TextControl;
+	var ToggleControl = components.ToggleControl;
 
 	var __ = i18n.__;
 
@@ -709,6 +710,273 @@
 		{ value: 'aktuelles', label: 'aktuelles' },
 	];
 
+	// --- Atts-Editor (v0.15.5) ------------------------------------------------
+
+	/**
+	 * Liefert das Schema-Object fuer einen Service aus der wp_localize_script-Bridge.
+	 *
+	 * Defensive-Read: Wenn dhpsAdminConfig.attsSchema fehlt (alter Cache, Bridge
+	 * noch nicht ausgerollt), wird ein leeres Object zurueckgegeben - dann wird
+	 * LivePreviewAttsForm nichts rendern und der Editor faellt auf v0.15.4-
+	 * Verhalten zurueck (nur layout/class/section/cache via LivePreviewControls).
+	 *
+	 * @since v0.15.5
+	 *
+	 * @param {string} service Service-Slug.
+	 * @returns {object} Schema-Map { attName: { type, default, ... } } oder {}.
+	 */
+	function getServiceSchema( service ) {
+		var bridge = ( typeof window !== 'undefined' && window.dhpsAdminConfig )
+			? window.dhpsAdminConfig
+			: {};
+		var schema = ( bridge && bridge.attsSchema && typeof bridge.attsSchema === 'object' )
+			? bridge.attsSchema
+			: {};
+		return ( schema && service && schema[ service ] && typeof schema[ service ] === 'object' )
+			? schema[ service ]
+			: {};
+	}
+
+	/**
+	 * Baut das Default-Atts-Object fuer einen Service aus dem Schema.
+	 *
+	 * Wird beim Service-Wechsel aufgerufen, damit alte service-spezifische Atts
+	 * (z.B. 'einzelvideo' aus TP) nicht in den neuen Service-Kontext leaken und
+	 * dort als "unknown att key" rejected werden.
+	 *
+	 * @since v0.15.5
+	 *
+	 * @param {string} service Service-Slug.
+	 * @returns {object} Atts-Map mit Schema-Defaults.
+	 */
+	function buildDefaultAtts( service ) {
+		var schema = getServiceSchema( service );
+		var atts = {};
+		Object.keys( schema ).forEach( function ( k ) {
+			var def = schema[ k ] || {};
+			atts[ k ] = ( def['default'] !== undefined ) ? def['default'] : '';
+		} );
+		// BC: Wenn das Schema layout/class/section nicht hat (sollte nie passieren),
+		// trotzdem Defaults setzen.
+		if ( atts.layout === undefined ) { atts.layout = 'default'; }
+		if ( atts['class'] === undefined ) { atts['class'] = ''; }
+		return atts;
+	}
+
+	/**
+	 * AttFieldString - TextControl fuer type=string.
+	 *
+	 * Props:
+	 *   name {string}     Att-Name.
+	 *   def {object}      Schema-Definition (type, default, label, description, ...).
+	 *   value {string}    Aktueller Wert.
+	 *   onChange {function} (name, value) => void.
+	 */
+	function AttFieldString( props ) {
+		var name = props.name;
+		var def = props.def || {};
+		var value = ( props.value !== undefined && props.value !== null ) ? String( props.value ) : '';
+		var onChange = props.onChange || function () {};
+		var label = def.label || name;
+
+		return h( TextControl, {
+			label: label,
+			value: value,
+			onChange: function ( val ) { onChange( name, val ); },
+			help: def.description || null,
+			'aria-label': label + ' (Att ' + name + ')',
+		} );
+	}
+
+	/**
+	 * AttFieldInt - TextControl mit type=number fuer type=int.
+	 *
+	 * Verwendet HTML-min/max-Attribute (Browser-Hinweis), das Backend
+	 * validiert die Grenzen erneut via SERVICE_ATTS_SCHEMA.
+	 *
+	 * Props (siehe AttFieldString).
+	 */
+	function AttFieldInt( props ) {
+		var name = props.name;
+		var def = props.def || {};
+		var defVal = ( def['default'] !== undefined ) ? def['default'] : 0;
+		var raw = ( props.value !== undefined && props.value !== null ) ? props.value : defVal;
+		var value = String( raw );
+		var onChange = props.onChange || function () {};
+		var label = def.label || name;
+		var rangeHint = '';
+		if ( typeof def.min === 'number' && typeof def.max === 'number' ) {
+			rangeHint = ' (' + def.min + '..' + def.max + ')';
+		}
+
+		return h( TextControl, {
+			label: label + rangeHint,
+			type: 'number',
+			min: ( typeof def.min === 'number' ) ? def.min : undefined,
+			max: ( typeof def.max === 'number' ) ? def.max : undefined,
+			value: value,
+			onChange: function ( val ) {
+				// Browser liefert string; wir geben string an Backend (PHP castet).
+				onChange( name, val );
+			},
+			help: def.description || null,
+			'aria-label': label + ' (Att ' + name + ')',
+		} );
+	}
+
+	/**
+	 * AttFieldBool - ToggleControl fuer type=bool.
+	 *
+	 * Backend erwartet '0' / '1' als String - das wird hier beim onChange
+	 * explizit gemappt (siehe Schema-Vertrag Sektion 3.3 R10).
+	 *
+	 * Props (siehe AttFieldString).
+	 */
+	function AttFieldBool( props ) {
+		var name = props.name;
+		var def = props.def || {};
+		var raw = props.value;
+		// Akzeptiere true/false, '1'/'0', 1/0.
+		var checked = ( raw === true || raw === '1' || raw === 1 );
+		var onChange = props.onChange || function () {};
+		var label = def.label || name;
+
+		return h( ToggleControl, {
+			label: label,
+			checked: checked,
+			onChange: function ( val ) {
+				onChange( name, val ? '1' : '0' );
+			},
+			help: def.description || null,
+		} );
+	}
+
+	/**
+	 * AttFieldSelect - SelectControl fuer type=select.
+	 *
+	 * options sind im Schema-Vertrag (Sektion 3.1) immer Array von
+	 * {value, label}-Objekten - kein flaches Array.
+	 *
+	 * Props (siehe AttFieldString).
+	 */
+	function AttFieldSelect( props ) {
+		var name = props.name;
+		var def = props.def || {};
+		var defVal = ( def['default'] !== undefined ) ? String( def['default'] ) : '';
+		var value = ( props.value !== undefined && props.value !== null ) ? String( props.value ) : defVal;
+		var onChange = props.onChange || function () {};
+		var label = def.label || name;
+		var options = Array.isArray( def.options ) ? def.options : [];
+
+		return h( SelectControl, {
+			label: label,
+			value: value,
+			options: options,
+			onChange: function ( val ) { onChange( name, val ); },
+			help: def.description || null,
+			'aria-label': label + ' (Att ' + name + ')',
+		} );
+	}
+
+	/**
+	 * renderAttField - dispatcher fuer einzelnen Att-Field-Render.
+	 *
+	 * @param {string} name      Att-Name.
+	 * @param {object} def       Schema-Definition.
+	 * @param {*}      value     Aktueller Wert.
+	 * @param {function} onChange (name, val) => void.
+	 * @returns {object|null} React-Element oder null.
+	 */
+	function renderAttField( name, def, value, onChange ) {
+		if ( ! def || typeof def.type !== 'string' ) {
+			return null;
+		}
+		var props = { key: name, name: name, def: def, value: value, onChange: onChange };
+		switch ( def.type ) {
+			case 'string':
+				return h( AttFieldString, props );
+			case 'int':
+				return h( AttFieldInt, props );
+			case 'bool':
+				return h( AttFieldBool, props );
+			case 'select':
+				return h( AttFieldSelect, props );
+			default:
+				return null;
+		}
+	}
+
+	/**
+	 * LivePreviewAttsForm - Container fuer service-spezifische Atts.
+	 *
+	 * Liest das Schema aus window.dhpsAdminConfig.attsSchema (von
+	 * wp_localize_script bereitgestellt) und rendert nur Felder mit
+	 * group='service_specific'. Universal-Felder (layout/class/cache)
+	 * bleiben in LivePreviewControls.
+	 *
+	 * Wenn Schema fehlt oder keine service_specific-Eintraege da sind
+	 * (z.B. TC, maes_merkblaetter), rendert die Komponente null.
+	 *
+	 * Props:
+	 *   service {string}     Aktueller Service-Slug.
+	 *   atts {object}        Aktuelle Atts-Werte.
+	 *   onAttChange {function} (name, value) => void.
+	 *
+	 * @since v0.15.5
+	 */
+	function LivePreviewAttsForm( props ) {
+		var service = props.service;
+		var atts = props.atts || {};
+		var onAttChange = props.onAttChange || function () {};
+
+		var schema = getServiceSchema( service );
+
+		// Nur service_specific-Atts rendern.
+		var serviceAttNames = Object.keys( schema ).filter( function ( key ) {
+			var def = schema[ key ];
+			return def && def.group === 'service_specific';
+		} );
+
+		if ( serviceAttNames.length === 0 ) {
+			return null;
+		}
+
+		var fields = serviceAttNames.map( function ( attName ) {
+			return renderAttField( attName, schema[ attName ], atts[ attName ], onAttChange );
+		} ).filter( function ( node ) { return node !== null; } );
+
+		if ( fields.length === 0 ) {
+			return null;
+		}
+
+		return h( 'div', {
+			className: 'dhps-react-atts-form',
+			style: {
+				marginTop: '12px',
+				padding: '12px',
+				border: '1px solid #e0e0e0',
+				borderRadius: '4px',
+				backgroundColor: '#fafafa',
+			},
+		},
+			h( 'div', {
+				style: {
+					fontSize: '12px',
+					fontWeight: '600',
+					color: '#646970',
+					marginBottom: '8px',
+					textTransform: 'uppercase',
+					letterSpacing: '0.5px',
+				},
+			}, __( 'Service-spezifische Atts (', 'deubner_hp_services' ) + service + ')' ),
+			h( Flex, { wrap: true, gap: 4, align: 'flex-end' },
+				fields.map( function ( field ) {
+					return h( FlexItem, { key: field.key }, field );
+				} )
+			)
+		);
+	}
+
 	/**
 	 * LivePreviewControls - Service/Layout/Class/Section + Render-Button.
 	 *
@@ -767,6 +1035,18 @@
 			)
 			: null;
 
+		// v0.15.5: Reset-Button setzt service-spezifische Atts auf Schema-Defaults
+		// zurueck. Universal-Atts (layout/class/section/cache) bleiben unveraendert,
+		// damit der User seinen Layout-Wechsel nicht verliert.
+		var onResetAtts = props.onResetAtts || function () {};
+
+		// v0.15.5: AttsForm-Callback - patcht einzelne Atts.
+		function onAttFieldChange( name, value ) {
+			var patch = {};
+			patch[ name ] = value;
+			patchAtts( patch );
+		}
+
 		return h( 'div', { className: 'dhps-react-preview-controls' },
 			h( Flex, { wrap: true, gap: 4, align: 'flex-end' },
 				h( FlexItem, {},
@@ -810,8 +1090,22 @@
 						? __( 'Rendere...', 'deubner_hp_services' )
 						: __( 'Vorschau laden', 'deubner_hp_services' )
 					)
+				),
+				h( FlexItem, {},
+					h( Button, {
+						variant: 'tertiary',
+						onClick: onResetAtts,
+						disabled: loading,
+						'aria-label': __( 'Service-spezifische Atts auf Defaults zuruecksetzen', 'deubner_hp_services' ),
+					}, __( 'Atts zuruecksetzen', 'deubner_hp_services' ) )
 				)
-			)
+			),
+			// v0.15.5: Service-spezifische Atts (dynamisch aus Schema).
+			h( LivePreviewAttsForm, {
+				service: service,
+				atts: atts,
+				onAttChange: onAttFieldChange,
+			} )
 		);
 	}
 
@@ -1016,13 +1310,53 @@
 	 *   atts_applied, atts_rejected, api_cache_hit, rendered_at.
 	 */
 	function LivePreviewPanel() {
-		var stateService = useState( 'mio' );
+		// v0.15.5: Initial-Atts aus Schema (mit Defaults). Fallback auf
+		// hartcodierte Defaults wenn Schema-Bridge fehlt.
+		var initialService = 'mio';
+		var initialAtts = ( function () {
+			var schema = getServiceSchema( initialService );
+			if ( Object.keys( schema ).length > 0 ) {
+				return buildDefaultAtts( initialService );
+			}
+			// BC-Fallback v0.15.4: layout/class/section ohne Schema.
+			return { layout: 'default', 'class': '', section: '' };
+		} )();
+
+		var stateService = useState( initialService );
 		var service = stateService[ 0 ];
 		var setService = stateService[ 1 ];
 
-		var stateAtts = useState( { layout: 'default', 'class': '', section: '' } );
+		var stateAtts = useState( initialAtts );
 		var atts = stateAtts[ 0 ];
 		var setAtts = stateAtts[ 1 ];
+
+		// v0.15.5: Service-Wechsel resettet service-spezifische Atts auf
+		// Schema-Defaults. Sonst landen alte Atts (z.B. 'einzelvideo' von TP)
+		// im neuen Service-Kontext und werden als "unknown att key" rejected.
+		var onServiceChange = useCallback( function ( newService ) {
+			setService( newService );
+			setAtts( buildDefaultAtts( newService ) );
+		}, [] );
+
+		// v0.15.5: Reset-Button - service-spezifische Atts auf Defaults.
+		// Universal-Atts (layout/class/section) bleiben erhalten.
+		var onResetAtts = useCallback( function () {
+			var defaults = buildDefaultAtts( service );
+			var schema = getServiceSchema( service );
+			// Universal-Atts aus aktuellem State uebernehmen.
+			var preserved = {};
+			Object.keys( schema ).forEach( function ( k ) {
+				var def = schema[ k ] || {};
+				if ( def.group === 'universal' && atts[ k ] !== undefined ) {
+					preserved[ k ] = atts[ k ];
+				}
+			} );
+			// Merge: defaults + preserved universal.
+			var next = {};
+			Object.keys( defaults ).forEach( function ( k ) { next[ k ] = defaults[ k ]; } );
+			Object.keys( preserved ).forEach( function ( k ) { next[ k ] = preserved[ k ]; } );
+			setAtts( next );
+		}, [ service, atts ] );
 
 		var stateHtml = useState( '' );
 		var html = stateHtml[ 0 ];
@@ -1130,8 +1464,9 @@
 					h( LivePreviewControls, {
 						service: service,
 						atts: atts,
-						onServiceChange: setService,
+						onServiceChange: onServiceChange,
 						onAttsChange: setAtts,
+						onResetAtts: onResetAtts,
 						onRun: runPreview,
 						loading: loading,
 					} ),

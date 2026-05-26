@@ -64,6 +64,19 @@ class DHPS_Admin {
     private $demo_manager;
 
     /**
+     * Aktiver Channel-Wert nach erfolgreichem save_update_channel-POST.
+     *
+     * Wird vom Template dashboard.php gelesen, um eine inline Success-Notice
+     * anzuzeigen. Bewusst nicht ueber admin_notices-Hook geloest, weil der
+     * Hook bereits ausgefuehrt wurde, bevor render_dashboard() laeuft.
+     * null wenn kein erfolgreicher Save in diesem Request stattgefunden hat.
+     *
+     * @since 0.16.0
+     * @var string|null
+     */
+    public $update_channel_saved = null;
+
+    /**
      * Konstruktor: Registriert Admin-Hooks.
      *
      * @since 0.4.0
@@ -291,8 +304,15 @@ class DHPS_Admin {
      * Bereitet die Service-Statusse und Demo-Konfiguration auf
      * und uebergibt sie an das Dashboard-Template.
      *
+     * Seit 0.16.0: Custom-POST-Dispatcher fuer dashboard-eigene Aktionen
+     * (z.B. save_update_channel). Architektur-Entscheidung: kein Settings-API-
+     * Form, sondern Custom-POST analog Demo-Toggle (siehe Discovery R6,
+     * 24-DEV-STRECKE-PLAN-v0160.md). Begruendung: das Dashboard ist kein
+     * Settings-Hub, das options.php-Roundtrip-Pattern waere hier overkill.
+     *
      * @since 0.4.0
      * @since 0.6.0 Demo-Status-Variablen hinzugefuegt.
+     * @since 0.16.0 dhps_action-Dispatcher fuer Custom-POST eingefuegt.
      *
      * @return void
      */
@@ -300,6 +320,11 @@ class DHPS_Admin {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( esc_html__( 'Sie haben keine Berechtigung fuer diese Seite.', 'deubner_hp_services' ) );
         }
+
+        // Custom-POST-Dispatcher (seit 0.16.0).
+        // Wird vor dem Template-Include ausgefuehrt, damit admin_notices /
+        // Redirect-Side-Effects sauber abgehandelt werden koennen.
+        $this->dispatch_dashboard_action();
 
         // Template-Variablen fuer das Dashboard.
         $statuses      = $this->demo_manager->get_all_statuses();
@@ -310,6 +335,91 @@ class DHPS_Admin {
         if ( file_exists( $template_path ) ) {
             include $template_path;
         }
+    }
+
+    /**
+     * Dispatcher fuer Custom-POST-Aktionen auf dem Dashboard.
+     *
+     * Liest $_POST['dhps_action'] aus und delegiert an die zustaendige
+     * Handler-Methode. Aktuelle Aktionen:
+     *
+     * - save_update_channel : Speichert den GitHub-Update-Channel
+     *   (stable / beta) und leert beide Release-Cache-Transients.
+     *
+     * Architektur (siehe Discovery R6 in 24-DEV-STRECKE-PLAN-v0160.md):
+     * Custom-POST statt Settings-API-Form, weil das Dashboard kein
+     * Settings-Hub ist und der Side-Effect (Cache-Flush) ausserhalb der
+     * Settings-API ausgefuehrt werden muss.
+     *
+     * @since 0.16.0
+     *
+     * @return void
+     */
+    private function dispatch_dashboard_action(): void {
+        if ( empty( $_POST['dhps_action'] ) ) {
+            return;
+        }
+
+        $action = sanitize_key( wp_unslash( $_POST['dhps_action'] ) );
+
+        switch ( $action ) {
+            case 'save_update_channel':
+                $this->handle_save_update_channel();
+                break;
+            // Weitere Aktionen koennen hier additiv ergaenzt werden.
+        }
+    }
+
+    /**
+     * POST-Handler fuer den Update-Channel-Switch.
+     *
+     * Pflicht-Checks:
+     * 1. Capability manage_options
+     * 2. Nonce-Verify gegen DEUBNER_HP_SERVICES_NONCE_ACTION
+     * 3. Sanitize via DHPS_GitHub_Updater::sanitize_channel() (Whitelist)
+     * 4. update_option()
+     * 5. Cache-Flush beider Transients (dhps_github_release + _beta)
+     * 6. admin_notice via Query-Var (kein Redirect noetig - die Page wird
+     *    sofort gerendert)
+     *
+     * Cache-Flush: bei jedem Speichern (auch wenn der Wert unveraendert
+     * bleibt) - das ist absichtlich, damit ein Force-Refresh moeglich ist.
+     *
+     * @since 0.16.0
+     *
+     * @return void
+     */
+    private function handle_save_update_channel(): void {
+        // Cap-Check (auch wenn render_dashboard() bereits gegated hat -
+        // Defense-in-Depth fuer den Handler-Aufruf).
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        // Nonce-Verify.
+        if ( ! isset( $_POST['_wpnonce'] ) ) {
+            return;
+        }
+        $nonce = sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) );
+        if ( ! wp_verify_nonce( $nonce, DEUBNER_HP_SERVICES_NONCE_ACTION ) ) {
+            return;
+        }
+
+        // Sanitize via Whitelist (sanitize_key + in_array).
+        $raw   = isset( $_POST['dhps_update_channel'] ) ? wp_unslash( $_POST['dhps_update_channel'] ) : '';
+        $value = DHPS_GitHub_Updater::sanitize_channel( $raw );
+
+        update_option( 'dhps_update_channel', $value );
+
+        // Cache-Trennung Stable vs Beta: beide Transients leeren,
+        // damit der naechste Update-Check frische Daten holt
+        // (T15 + T17 Trust-Decisions).
+        delete_transient( 'dhps_github_release' );
+        delete_transient( 'dhps_github_release_beta' );
+
+        // Success-Flag fuer das Template (notice wird inline gerendert,
+        // weil admin_notices-Hook zu diesem Zeitpunkt bereits gelaufen ist).
+        $this->update_channel_saved = $value;
     }
 
     /**

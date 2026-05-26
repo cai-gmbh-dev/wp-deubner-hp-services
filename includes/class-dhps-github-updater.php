@@ -32,6 +32,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DHPS_GitHub_Updater {
 
     /**
+     * Erlaubte Werte fuer den Update-Channel.
+     *
+     * Whitelist, gegen die der Sanitize-Callback prueft. Wer einen
+     * unbekannten Wert per Option setzt, faellt auf 'stable' zurueck.
+     *
+     * @since 0.16.0
+     * @var string[]
+     */
+    public const ALLOWED_CHANNELS = array( 'stable', 'beta' );
+
+    /**
      * GitHub Repository Owner.
      *
      * @var string
@@ -67,6 +78,16 @@ class DHPS_GitHub_Updater {
     private $current_version;
 
     /**
+     * Update-Channel ('stable' oder 'beta').
+     *
+     * Wird vom Konstruktor via sanitize_channel() normalisiert.
+     *
+     * @since 0.16.0
+     * @var string
+     */
+    private $channel;
+
+    /**
      * Gecachte GitHub-Release-Daten.
      *
      * @var array|null
@@ -74,7 +95,7 @@ class DHPS_GitHub_Updater {
     private $github_data = null;
 
     /**
-     * Cache-Transient-Name.
+     * Cache-Transient-Name (Stable-Channel).
      *
      * @var string
      */
@@ -91,18 +112,45 @@ class DHPS_GitHub_Updater {
      * Konstruktor.
      *
      * @since 0.9.5
+     * @since 0.16.0 Channel-Parameter hinzugefuegt (Default 'stable').
      *
      * @param string $owner           GitHub-Benutzername/Organisation.
      * @param string $repo            Repository-Name.
      * @param string $plugin_basename Plugin-Basename via plugin_basename(__FILE__).
      * @param string $current_version Aktuelle Plugin-Version.
+     * @param string $channel         Update-Channel ('stable' oder 'beta'). Default 'stable'.
      */
-    public function __construct( string $owner, string $repo, string $plugin_basename, string $current_version ) {
+    public function __construct(
+        string $owner,
+        string $repo,
+        string $plugin_basename,
+        string $current_version,
+        string $channel = 'stable'
+    ) {
         $this->owner           = $owner;
         $this->repo            = $repo;
         $this->plugin_basename = $plugin_basename;
         $this->plugin_slug     = dirname( $plugin_basename );
         $this->current_version = $current_version;
+        $this->channel         = self::sanitize_channel( $channel );
+    }
+
+    /**
+     * Sanitize-Callback fuer den Update-Channel.
+     *
+     * Whitelist-Check gegen self::ALLOWED_CHANNELS. Faellt bei unbekannten
+     * Werten auf 'stable' zurueck. Vorgeschaltetes sanitize_key() sorgt
+     * fuer lowercase ASCII-Normalisierung.
+     *
+     * @since 0.16.0
+     *
+     * @param mixed $value Roh-Wert aus POST / Option / REST.
+     *
+     * @return string 'stable' oder 'beta'.
+     */
+    public static function sanitize_channel( $value ): string {
+        $value = sanitize_key( (string) $value );
+        return in_array( $value, self::ALLOWED_CHANNELS, true ) ? $value : 'stable';
     }
 
     /**
@@ -127,18 +175,25 @@ class DHPS_GitHub_Updater {
     }
 
     /**
-     * Loescht den GitHub-Release-Cache wenn WordPress den Update-Transient loescht.
+     * Loescht den GitHub-Release-Cache (beide Channels) wenn WordPress den
+     * Update-Transient loescht.
      *
      * Wird ausgeloest wenn der User auf "Erneut pruefen" klickt oder
      * WordPress den Update-Check neu startet. Stellt sicher, dass
      * beim naechsten Check frische Daten von GitHub geholt werden.
      *
+     * Cache-Trennung: Stable nutzt 'dhps_github_release', Beta nutzt
+     * 'dhps_github_release_beta'. Beide werden gemeinsam geleert, damit
+     * ein Channel-Wechsel zur Laufzeit konsistent reagiert.
+     *
      * @since 0.9.7
+     * @since 0.16.0 Beta-Cache zusaetzlich geleert.
      *
      * @return void
      */
     public function flush_release_cache(): void {
-        delete_transient( $this->transient_key );
+        delete_transient( 'dhps_github_release' );
+        delete_transient( 'dhps_github_release_beta' );
         $this->github_data = null;
     }
 
@@ -322,23 +377,48 @@ class DHPS_GitHub_Updater {
     }
 
     /**
-     * Holt die neueste Release-Information von GitHub (mit Caching).
+     * Holt die neueste Release-Information von GitHub (Channel-Switch).
+     *
+     * Delegiert je nach $this->channel an get_release_for_stable_channel()
+     * oder get_release_for_beta_channel(). In-Memory-Cache via $github_data
+     * verhindert doppelte API-Calls innerhalb eines Requests.
      *
      * @since 0.9.5
+     * @since 0.16.0 Channel-Switch eingefuehrt (stable vs beta).
      *
-     * @return array|null Release-Daten oder null bei Fehler.
+     * @return array|null Release-Daten oder null bei Fehler / keinem neueren Release.
      */
     private function get_latest_release(): ?array {
         if ( null !== $this->github_data ) {
             return $this->github_data;
         }
 
+        if ( 'beta' === $this->channel ) {
+            $this->github_data = $this->get_release_for_beta_channel();
+        } else {
+            $this->github_data = $this->get_release_for_stable_channel();
+        }
+
+        return $this->github_data;
+    }
+
+    /**
+     * Holt das aktuelle Stable-Release von GitHub.
+     *
+     * Endpoint: /releases/latest (ein Objekt, GitHub filtert Pre-Releases
+     * implizit weg). Cache-Key: dhps_github_release (3h TTL). Bei Fehler
+     * wird ein 10-Minuten-Stille-Cache gesetzt, um die API zu schonen.
+     *
+     * @since 0.16.0 Extrahiert aus get_latest_release(), Verhalten unveraendert.
+     *
+     * @return array|null Release-Daten oder null bei Fehler.
+     */
+    private function get_release_for_stable_channel(): ?array {
         // Transient-Cache pruefen.
         $cached = get_transient( $this->transient_key );
 
         if ( false !== $cached && is_array( $cached ) && ! empty( $cached['tag_name'] ) ) {
-            $this->github_data = $cached;
-            return $this->github_data;
+            return $cached;
         }
 
         // GitHub API abfragen.
@@ -369,10 +449,87 @@ class DHPS_GitHub_Updater {
             return null;
         }
 
-        $this->github_data = $body;
         set_transient( $this->transient_key, $body, $this->cache_ttl );
 
-        return $this->github_data;
+        return $body;
+    }
+
+    /**
+     * Holt das neueste Release fuer den Beta-Channel von GitHub.
+     *
+     * Endpoint: /releases?per_page=30 (Liste, GitHub sortiert nach
+     * published_at desc). Iteriert die Liste und gibt das erste Release
+     * zurueck, dessen Tag per version_compare GROESSER als die aktuell
+     * installierte Version ist - das umfasst Pre-Releases UND Stable
+     * gleichermassen. Cache-Key: dhps_github_release_beta (3h TTL,
+     * getrennt vom Stable-Cache fuer T15 Cache-Trennung).
+     *
+     * Defensive Lesung gemaess GitHub-API-Schema-Vertrag (siehe
+     * docs/architecture/24-DEV-STRECKE-PLAN-v0160.md Sektion 3.3):
+     * - draft   -> immer skip (auch nicht im Beta-Channel sichtbar)
+     * - tag_name leer -> skip
+     * - prerelease wird NICHT gefiltert (Beta sieht beides)
+     *
+     * Trust-Decision T13 (v0.16.0): Kein Auto-Downgrade - wir akzeptieren
+     * nur Releases mit version_compare > current.
+     *
+     * @since 0.16.0
+     *
+     * @return array|null Erstes passendes Release-Objekt oder null wenn keines neuer.
+     */
+    private function get_release_for_beta_channel(): ?array {
+        $cache_key = 'dhps_github_release_beta';
+
+        $cached = get_transient( $cache_key );
+        if ( false !== $cached && is_array( $cached ) ) {
+            return ! empty( $cached['tag_name'] ) ? $cached : null;
+        }
+
+        $url = sprintf(
+            'https://api.github.com/repos/%s/%s/releases?per_page=30',
+            $this->owner,
+            $this->repo
+        );
+
+        $response = wp_remote_get( $url, array(
+            'timeout'    => 10,
+            'headers'    => array(
+                'Accept' => 'application/vnd.github.v3+json',
+            ),
+            'user-agent' => 'WordPress/' . get_bloginfo( 'version' ) . '; ' . home_url(),
+        ) );
+
+        if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+            // Bei Fehler kurzfristig cachen um API nicht zu ueberlasten.
+            set_transient( $cache_key, array(), 600 );
+            return null;
+        }
+
+        $releases = json_decode( wp_remote_retrieve_body( $response ), true );
+        if ( ! is_array( $releases ) ) {
+            set_transient( $cache_key, array(), 600 );
+            return null;
+        }
+
+        foreach ( $releases as $release ) {
+            // GitHub-Felder: 'tag_name' (string), 'prerelease' (bool), 'draft' (bool), 'zipball_url', 'html_url', 'published_at'.
+            if ( ! is_array( $release ) || empty( $release['tag_name'] ) ) {
+                continue;
+            }
+            if ( ! empty( $release['draft'] ) ) {
+                continue; // Drafts sind nie sichtbar.
+            }
+
+            $version = $this->normalize_version( $release['tag_name'] );
+            if ( version_compare( $version, $this->current_version, '>' ) ) {
+                set_transient( $cache_key, $release, $this->cache_ttl );
+                return $release;
+            }
+        }
+
+        // Kein neueres Release gefunden - leeren Cache setzen, damit wir nicht spamen.
+        set_transient( $cache_key, array(), $this->cache_ttl );
+        return null;
     }
 
     /**

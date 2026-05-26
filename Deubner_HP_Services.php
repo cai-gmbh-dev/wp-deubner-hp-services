@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.15.5
+ * Version: 0.16.0
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -19,7 +19,7 @@
  * Developer Author: Kai R. Emde
  *
  * @package Deubner Homepage-Service
- * @version 0.15.5
+ * @version 0.16.0
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.15.5' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.16.0' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -142,6 +142,7 @@ function dhps_activate() {
         'dhps_tc_kdnr'        => '',
         'dhps_maes_kdnr'      => '',
         'dhps_lp_ota'         => '',
+        'dhps_update_channel' => 'stable',  // seit v0.16.0
     );
 
     foreach ( $defaults as $key => $value ) {
@@ -336,11 +337,14 @@ function dhps_init() {
     add_action( 'wp_enqueue_scripts', 'dhps_enqueue_frontend_styles' );
 
     // 12. GitHub-Updater initialisieren (prueft auf neue Releases).
+    // Seit 0.16.0: 5. Argument `channel` aus WP-Option `dhps_update_channel`.
+    // Erlaubte Werte: 'stable' (Default) oder 'beta' (Pre-Releases sichtbar).
     $updater = new DHPS_GitHub_Updater(
         'cai-gmbh-dev',
         'wp-deubner-hp-services',
         DEUBNER_HP_SERVICES_BASENAME,
-        DEUBNER_HP_SERVICES_VERSION
+        DEUBNER_HP_SERVICES_VERSION,
+        get_option( 'dhps_update_channel', 'stable' )
     );
     $updater->init();
 }
@@ -757,6 +761,20 @@ function dhps_register_options() {
                 return '1' === (string) $value ? '1' : '0';
             },
             'default'           => '0',
+            'show_in_rest'      => false,
+        )
+    );
+
+    // Update-Channel (Stable / Beta) - seit 0.16.0.
+    // Sanitize via Whitelist-Callback in DHPS_GitHub_Updater::sanitize_channel().
+    // Whitelist-Konstante: DHPS_GitHub_Updater::ALLOWED_CHANNELS.
+    register_setting(
+        'dhps_settings_group',
+        'dhps_update_channel',
+        array(
+            'type'              => 'string',
+            'sanitize_callback' => array( 'DHPS_GitHub_Updater', 'sanitize_channel' ),
+            'default'           => 'stable',
             'show_in_rest'      => false,
         )
     );

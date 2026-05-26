@@ -1,6 +1,24 @@
 # Entwicklungsumgebung
 
-## Docker Setup
+## Port-Uebersicht (seit v0.16.0)
+
+| Port | Service | Stack | Compose-File |
+|------|---------|-------|--------------|
+| 8082 | WordPress Dev | Dev | `docker-compose.yml` |
+| 8083 | phpMyAdmin Dev | Dev | `docker-compose.yml` |
+| 8086 | WordPress Stage | Stage | `docker-compose.staging.yml` |
+| 8087 | phpMyAdmin Stage | Stage | `docker-compose.staging.yml` |
+
+> Hinweis: Plan-Doc nannte urspruenglich 8084/8085. Auf diesem Entwickler-Host
+> sind die durch andere Docker-Projekte belegt - Lead-Decision in v0.16.0
+> verschiebt die Stage auf 8086/8087.
+
+Beide Stacks koennen parallel laufen (getrennte Project-Namen, getrennte
+Volumes, getrennte DB-Namen). Der Plugin-Mount zeigt in beiden Faellen auf
+dasselbe Source-Directory, sodass Code-Aenderungen sofort in beiden Stacks
+wirken (Trust-Decision T16 in `docs/architecture/24-DEV-STRECKE-PLAN-v0160.md`).
+
+## Docker Setup - Dev-Stack
 
 ### Starten
 ```bash
@@ -25,6 +43,55 @@ WP_DEBUG=true
 WP_DEBUG_LOG=true
 WP_DEBUG_DISPLAY=true
 ```
+
+## Stage-Stack (seit v0.16.0)
+
+Die Stage-Site dient dem Test eines Pre-Releases von GitHub VOR der Promotion
+zu Stable. Siehe `docs/team-knowledge/07-RELEASE-CHECKLIST.md` fuer den
+Test-Ablauf.
+
+### Starten
+```bash
+docker compose -p dhps-stage -f docker-compose.staging.yml up -d
+```
+
+### Stoppen
+```bash
+docker compose -p dhps-stage -f docker-compose.staging.yml down
+```
+
+### Zugang
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| WordPress Stage | http://localhost:8086 | admin / (bei Setup festgelegt) |
+| phpMyAdmin Stage | http://localhost:8087 | wp_user_stage / wp_pass_stage_2025 |
+| DB Stage | db:3306 (im Netzwerk dhps-stage) | wp_user_stage / wp_pass_stage_2025 |
+
+### Container
+- **MariaDB 10.11**: Volume `db_data_stage`, DB `wordpress_stage`
+- **WordPress (latest)**: Volume `wp_data_stage`, Plugin-Mount identisch zum Dev-Stack
+- **phpMyAdmin**: separater Stage-Container
+
+Zusaetzliche Konstante in Stage-`wp-config.php` (per WORDPRESS_CONFIG_EXTRA):
+```php
+define( 'DHPS_ENV_LABEL', 'STAGE' );
+```
+
+### Schreibrechte-Hinweis (Risiko R5 v0.16.0)
+
+Auf Windows-Hosts kann das WP-Update auf der Stage-Site an Permissions scheitern,
+weil das Plugin-Verzeichnis ueber den Docker-Bind-Mount gehalten wird und der
+Container-User `www-data` ggf. keine Schreibrechte hat.
+
+Workaround:
+
+```bash
+docker exec dhps-stage-wordpress-1 \
+  chown -R www-data:www-data /var/www/html/wp-content/plugins/wp-deubner-hp-services
+```
+
+Konkreten Container-Namen mit `docker ps` verifizieren - das Suffix `-1` ist
+Compose-Default, kann aber variieren.
 
 ## Windows-spezifische Hinweise
 

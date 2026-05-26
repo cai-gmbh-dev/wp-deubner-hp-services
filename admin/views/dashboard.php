@@ -184,6 +184,51 @@ $product_images = array(
 				</p>
 			</div>
 
+			<!-- Update-Channel-Block (v0.16.0) -->
+			<div class="dhps-update-channel-section">
+				<h2><?php esc_html_e( 'Update-Channel', 'deubner_hp_services' ); ?></h2>
+
+				<?php
+				// Inline-Success-Notice nach erfolgreichem save_update_channel-POST.
+				// admin_notices-Hook ist hier bereits gelaufen - daher inline.
+				if ( isset( $this ) && $this instanceof DHPS_Admin && null !== $this->update_channel_saved ) {
+					$saved_label = ( 'beta' === $this->update_channel_saved )
+						? __( 'Beta (Pre-Releases inklusive)', 'deubner_hp_services' )
+						: __( 'Stabil (empfohlen fuer Produktivsysteme)', 'deubner_hp_services' );
+					printf(
+						'<div class="notice notice-success is-dismissible"><p>%s <strong>%s</strong></p></div>',
+						esc_html__( 'Update-Channel gespeichert:', 'deubner_hp_services' ),
+						esc_html( $saved_label )
+					);
+				}
+				?>
+
+				<form method="post" action="">
+					<?php wp_nonce_field( DEUBNER_HP_SERVICES_NONCE_ACTION ); ?>
+					<input type="hidden" name="dhps_action" value="save_update_channel" />
+
+					<?php $current_channel = get_option( 'dhps_update_channel', 'stable' ); ?>
+
+					<label>
+						<input type="radio" name="dhps_update_channel" value="stable"
+							<?php checked( $current_channel, 'stable' ); ?> />
+						<?php esc_html_e( 'Stabil (empfohlen fuer Produktivsysteme)', 'deubner_hp_services' ); ?>
+					</label>
+					<br />
+					<label>
+						<input type="radio" name="dhps_update_channel" value="beta"
+							<?php checked( $current_channel, 'beta' ); ?> />
+						<?php esc_html_e( 'Beta (Pre-Releases inklusive)', 'deubner_hp_services' ); ?>
+					</label>
+
+					<p>
+						<button type="submit" class="button button-primary">
+							<?php esc_html_e( 'Channel speichern', 'deubner_hp_services' ); ?>
+						</button>
+					</p>
+				</form>
+			</div>
+
 			<!-- React-Dashboard Mount-Point (seit 0.15.0).
 			     Health-Monitor + API-Test-Tools + Cache-Statistik werden hier
 			     gerendert. JS-Bundle `dhps-admin-react` wird conditional

@@ -39,12 +39,36 @@ DHPS_GitHub_Updater (WordPress-Plugin)
 ### Konstruktor
 ```php
 new DHPS_GitHub_Updater(
-    'cai-gmbh-dev',                    // GitHub Owner
-    'wp-deubner-hp-services',          // Repository Name
-    DEUBNER_HP_SERVICES_BASENAME,      // Plugin Basename
-    DEUBNER_HP_SERVICES_VERSION        // Aktuelle Version
+    'cai-gmbh-dev',                                   // GitHub Owner
+    'wp-deubner-hp-services',                         // Repository Name
+    DEUBNER_HP_SERVICES_BASENAME,                     // Plugin Basename
+    DEUBNER_HP_SERVICES_VERSION,                      // Aktuelle Version
+    get_option( 'dhps_update_channel', 'stable' )     // Channel (seit 0.16.0)
 );
 ```
+
+### Update-Channel (seit v0.16.0)
+
+Das Plugin unterstuetzt zwei Update-Kanaele:
+
+| Channel | Sieht | Endpoint |
+|---------|-------|----------|
+| `stable` (Default) | Nur stable Releases | `/repos/{owner}/{repo}/releases/latest` |
+| `beta` | Pre-Releases + Stable | `/repos/{owner}/{repo}/releases?per_page=30` (Liste, iteriert bis Version > current) |
+
+**Konfiguration** ueber WP-Option `dhps_update_channel` (Admin-Dashboard -> Update-Channel-Block) oder per WP-CLI:
+
+```bash
+wp option update dhps_update_channel beta
+```
+
+**Sanitize**: `DHPS_GitHub_Updater::sanitize_channel( $value )` (public static) - Whitelist-Check via `DHPS_GitHub_Updater::ALLOWED_CHANNELS`, Fallback `stable`.
+
+**Cache-Trennung**: Stable nutzt Transient `dhps_github_release`, Beta nutzt `dhps_github_release_beta`. `flush_release_cache()` leert beide.
+
+**Trust-Decision T13**: Kein Auto-Downgrade ueber Channels - `version_compare > current` ist strikt. Wer auf einer Beta-Version steht und auf `stable` wechselt, sieht das naechste Stable erst, sobald es echt groesser ist (`v0.16.0 > v0.16.0-rc.3`).
+
+**Verlinkung**: Release-Gate-Workflow siehe `docs/team-knowledge/07-RELEASE-CHECKLIST.md`. Tag-Format-Vertrag: Pre-Release MUSS mit Punkt-Suffix kommen (`v0.X.Y-rc.N`, nicht `v0.X.Y-rcN`).
 
 ### Hooks
 
@@ -56,8 +80,9 @@ new DHPS_GitHub_Updater(
 
 ### Caching
 
-- **Transient:** `dhps_github_release`
-- **TTL:** 43200 Sekunden (12 Stunden)
+- **Transient (stable):** `dhps_github_release`
+- **Transient (beta):** `dhps_github_release_beta` (seit v0.16.0)
+- **TTL:** 10800 Sekunden (3 Stunden) - Code-Wahrheit `DHPS_GitHub_Updater::$cache_ttl`
 - **Error-TTL:** 600 Sekunden (10 Minuten) bei API-Fehler
 - **Kein API-Token noetig** (oeffentliches Repository)
 

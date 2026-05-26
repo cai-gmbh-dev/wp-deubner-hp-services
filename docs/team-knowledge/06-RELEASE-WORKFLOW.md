@@ -74,6 +74,49 @@ v0.10.0  - Minor (neue Features)
 v1.0.0   - Major (Breaking Changes)
 ```
 
+Seit v0.16.0 zusaetzlich Pre-Release-Format (siehe Pre-Release-Schritt unten):
+
+```
+v{major}.{minor}.{patch}-rc.{n}    z.B. v0.16.0-rc.1
+v{major}.{minor}.{patch}-beta.{n}  z.B. v0.16.0-beta.1
+```
+
+Wichtig: Der Suffix MUSS einen Punkt enthalten (`-rc.1`, NICHT `-rc1`).
+PHPs `version_compare` sortiert sonst falsch (Trust-Decision T14).
+
+## Pre-Release-Schritt vor Stable (seit v0.16.0)
+
+Seit v0.16.0 gibt es ein zweistufiges Release-Gate: zuerst Pre-Release auf der
+Stage-Site testen, dann erst Stable promoten. Details, Smoke-Tests und
+Rollback-Strategie stehen in der Checkliste:
+
+-> `docs/team-knowledge/07-RELEASE-CHECKLIST.md`
+
+Kurz-Ablauf:
+
+```bash
+# 1. Pre-Release auf GitHub schneiden (sichtbar nur fuer Beta-Channel-Sites)
+gh release create v0.16.0-rc.1 \
+  --prerelease \
+  --title "v0.16.0-rc.1" \
+  --notes "Release-Candidate fuer Stage-Test"
+
+# 2. Stage-Site (Channel=beta) testet -> Smoke-Tests aus 07-RELEASE-CHECKLIST.md
+
+# 3. Bei OK: NEUEN Stable-Tag schneiden (nicht den Pre-Release-Tag editieren)
+gh release create v0.16.0 \
+  --notes-file release-notes-v0.16.0.md \
+  --latest
+
+# 4. Bei NICHT-OK: Pre-Release loeschen oder neuen rc-Tag schneiden
+gh release delete v0.16.0-rc.1
+git tag -d v0.16.0-rc.1
+git push --delete origin v0.16.0-rc.1
+```
+
+Voraussetzung: Auf der Stage-Site ist `dhps_update_channel = beta` gesetzt
+(WP-Admin -> Deubner Verlag -> Update-Channel oder per WP-CLI).
+
 ## Checkliste vor Release
 
 - [ ] Version in Plugin-Header, PHPDoc und Konstante aktualisiert

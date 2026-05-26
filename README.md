@@ -2,7 +2,7 @@
 
 WordPress-Plugin zur Integration der Deubner Verlag Content-Services
 
-Version: 0.15.5 | Lizenz: GPL-2.0-or-later | Entwicklung: CAI GmbH
+Version: 0.16.0 | Lizenz: GPL-2.0-or-later | Entwicklung: CAI GmbH
 
 ---
 

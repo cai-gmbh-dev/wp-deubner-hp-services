@@ -52,6 +52,8 @@ class DHPS_Preview_Renderer {
 	 *
 	 * MAES nutzt die TP-JS-Pipeline (Video-Lazy-Loading).
 	 *
+	 * Sub-Shortcodes erben ihr JS ueber SUB_SHORTCODE_PARENTS (v0.15.4).
+	 *
 	 * @since 0.15.3
 	 * @var array<string,string>
 	 */
@@ -65,6 +67,34 @@ class DHPS_Preview_Renderer {
 		'lp'    => 'public/js/dhps-tp.js',
 		'maes'  => 'public/js/dhps-tp.js',
 	);
+
+	/**
+	 * Sub-Shortcode-zu-Parent-Service-Mapping (v0.15.4).
+	 *
+	 * Sub-Shortcodes sind NICHT in DHPS_Service_Registry registriert (sie
+	 * haengen direkt an add_shortcode()). Damit Auth-Token + Endpoint + JS-Asset
+	 * trotzdem aufgeloest werden koennen, weist diese Map jedem Sub-Shortcode
+	 * seinen Parent zu.
+	 *
+	 * Public, damit DHPS_Admin_REST den Lookup teilen kann ohne eigene Map.
+	 *
+	 * @since 0.15.4
+	 * @var array<string,string>
+	 */
+	public const SUB_SHORTCODE_PARENTS = array(
+		'mio_termine'       => 'mio',
+		'maes_videos'       => 'maes',
+		'maes_merkblaetter' => 'maes',
+		'maes_aktuelles'    => 'maes',
+	);
+
+	/**
+	 * Whitelist erlaubter Boolean-Att-Werte fuer `cache`.
+	 *
+	 * @since 0.15.4
+	 * @var array<int,string>
+	 */
+	private const ALLOWED_CACHE_VALUES = array( '0', '1' );
 
 	/**
 	 * Optionaler Cache-Stats-Service (zur Cache-Hit-Probe).
@@ -140,7 +170,13 @@ class DHPS_Preview_Renderer {
 
 		if ( isset( $atts['section'] ) ) {
 			$section_raw = (string) $atts['section'];
-			if ( 'maes' !== $service ) {
+			// v0.15.4: section ist auch fuer maes_*-Sub-Shortcodes erlaubt
+			// (sie haengen logisch am MAES-Parent).
+			$section_allowed = ( 'maes' === $service )
+				|| ( isset( self::SUB_SHORTCODE_PARENTS[ $service ] )
+					&& 'maes' === self::SUB_SHORTCODE_PARENTS[ $service ] );
+
+			if ( ! $section_allowed ) {
 				$atts_rejected['section'] = 'only allowed for maes';
 			} elseif ( '' === $section_raw ) {
 				$atts_applied['section'] = '';
@@ -155,8 +191,23 @@ class DHPS_Preview_Renderer {
 			}
 		}
 
+		// v0.15.4: `cache`-Att (Boolean) wird durchgereicht, damit Sub-Shortcodes
+		// optional ohne Cache rendern koennen. Atts-Whitelist im REST-Handler
+		// hat den Wert bereits auf '0' / '1' normalisiert.
+		if ( isset( $atts['cache'] ) ) {
+			$cache_raw = (string) $atts['cache'];
+			if ( in_array( $cache_raw, self::ALLOWED_CACHE_VALUES, true ) ) {
+				$atts_applied['cache'] = $cache_raw;
+				// Wir reichen den boolean-Wert als Shortcode-Att durch, damit
+				// die jeweiligen Shortcode-Handler ihn auswerten koennen.
+				$shortcode_atts .= ' cache="' . esc_attr( $cache_raw ) . '"';
+			} else {
+				$atts_rejected['cache'] = 'value not boolean (0|1)';
+			}
+		}
+
 		// Unbekannte atts-Keys silent in rejected aufnehmen.
-		$known_keys = array( 'layout', 'class', 'section' );
+		$known_keys = array( 'layout', 'class', 'section', 'cache' );
 		foreach ( $atts as $key => $val ) {
 			if ( ! in_array( $key, $known_keys, true ) && ! isset( $atts_rejected[ $key ] ) ) {
 				$atts_rejected[ (string) $key ] = 'unknown att key';
@@ -259,7 +310,7 @@ class DHPS_Preview_Renderer {
 	private function build_html_document( string $service, string $body ): string {
 
 		$plugin_url    = defined( 'DEUBNER_HP_SERVICES_URL' ) ? DEUBNER_HP_SERVICES_URL : '';
-		$plugin_ver    = defined( 'DEUBNER_HP_SERVICES_VERSION' ) ? DEUBNER_HP_SERVICES_VERSION : '0.15.3';
+		$plugin_ver    = defined( 'DEUBNER_HP_SERVICES_VERSION' ) ? DEUBNER_HP_SERVICES_VERSION : '0.15.4';
 		$service_label = esc_html( strtoupper( $service ) );
 
 		// CSS-Files (Reihenfolge analog Frontend-Enqueue).
@@ -276,9 +327,14 @@ class DHPS_Preview_Renderer {
 		}
 
 		// JS-Files: Service-spezifisch + Alpine (defensiv unconditional).
+		// v0.15.4: Sub-Shortcodes erben ihr JS vom Parent-Service.
+		$js_lookup_slug = isset( self::SUB_SHORTCODE_PARENTS[ $service ] )
+			? self::SUB_SHORTCODE_PARENTS[ $service ]
+			: $service;
+
 		$js_files = array();
-		if ( isset( self::SERVICE_JS_MAP[ $service ] ) ) {
-			$js_files[] = self::SERVICE_JS_MAP[ $service ];
+		if ( isset( self::SERVICE_JS_MAP[ $js_lookup_slug ] ) ) {
+			$js_files[] = self::SERVICE_JS_MAP[ $js_lookup_slug ];
 		}
 		// Alpine in der Order Vendor -> Init -> Components.
 		$js_files[] = 'public/js/vendor/alpinejs-3.14.x.min.js';
@@ -296,6 +352,11 @@ class DHPS_Preview_Renderer {
 		$inline_css = 'body{margin:16px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#fff;color:#222;}'
 			. 'html,body{min-height:0;}';
 
+		// v0.15.4: postMessage-Resize-Snippet (Ticket 5 aus Tech-Debt-Triage).
+		// Misst iframe-Hoehe und postet sie an Parent. KEINE User-Inputs - hartcodiert.
+		// Security-Layer: Parent prueft type+bounds+max-cap, hier nur Mess-Logik.
+		$resize_js = $this->get_postmessage_resize_snippet();
+
 		$document  = '<!DOCTYPE html>' . "\n";
 		$document .= '<html lang="de"><head>' . "\n";
 		$document .= '<meta charset="utf-8">' . "\n";
@@ -308,8 +369,72 @@ class DHPS_Preview_Renderer {
 		// Body ist trusted (DHPS-Templates escapen schon, TC liefert bewusst Inline-JS).
 		$document .= $body . "\n";
 		$document .= $js_tags;
+		$document .= $resize_js;
 		$document .= '</body></html>';
 
 		return $document;
+	}
+
+	/**
+	 * Liefert das postMessage-Resize-Snippet fuer iframe-Hoehe (v0.15.4).
+	 *
+	 * Das Snippet ist hartcodiert (KEINE User-Inputs), misst die scrollHeight
+	 * von body+documentElement und sendet sie an den Parent. Parent (React-
+	 * Listener in dhps-admin-react.js) prueft type/bounds/max-cap.
+	 *
+	 * Security-Design:
+	 *   - targetOrigin '*' ist akzeptabel: iframe srcdoc hat about:srcdoc-Origin,
+	 *     ein klassischer Origin-Check ist hier nicht moeglich. Schutz liegt
+	 *     beim Parent (type-Check + numeric-bounds + 4000px-Cap).
+	 *   - DoS-Schutz: MAX_HEIGHT-Cap bei 4000px, damit ein praepariertes
+	 *     iframe das Parent-Layout nicht unendlich aufblaehen kann.
+	 *   - rate-limited via ResizeObserver-Throttle (Browser default).
+	 *
+	 * @since 0.15.4
+	 *
+	 * @return string Komplettes <script>-Tag.
+	 */
+	private function get_postmessage_resize_snippet(): string {
+		return <<<'JS'
+<script>
+(function () {
+	'use strict';
+	var TYPE = 'dhps-preview-resize';
+	var MAX_HEIGHT = 4000;
+	var lastH = 0;
+
+	function postHeight() {
+		var h = Math.max(
+			document.body ? document.body.scrollHeight : 0,
+			document.documentElement ? document.documentElement.scrollHeight : 0
+		);
+		if (h > MAX_HEIGHT) { h = MAX_HEIGHT; }
+		if (h < 1) { return; }
+		if (h === lastH) { return; }
+		lastH = h;
+		try {
+			window.parent.postMessage({ type: TYPE, height: h }, '*');
+		} catch (e) {}
+	}
+
+	if (document.readyState === 'complete' || document.readyState === 'interactive') {
+		setTimeout(postHeight, 50);
+	} else {
+		document.addEventListener('DOMContentLoaded', postHeight);
+	}
+	window.addEventListener('load', postHeight);
+	window.addEventListener('resize', postHeight);
+
+	if (typeof ResizeObserver !== 'undefined') {
+		try {
+			var ro = new ResizeObserver(function () { postHeight(); });
+			if (document.body) { ro.observe(document.body); }
+		} catch (e) {}
+	} else {
+		setInterval(postHeight, 1000);
+	}
+})();
+</script>
+JS;
 	}
 }

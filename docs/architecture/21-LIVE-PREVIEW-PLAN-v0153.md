@@ -1,9 +1,14 @@
 # Live-Preview-Plan v0.15.3 (Discovery)
 
-## Stand: 2026-05-25
-## Status: Architektur-Vorschlag (KEINE Code-Aenderungen)
+## Stand: 2026-05-25 (urspruenglich), Sektionen 9.3+9.4 nachgepflegt in v0.15.4 (2026-05-26)
+## Status: Architektur-Vorschlag - umgesetzt in v0.15.3, Schema-Drift in v0.15.4 dokumentiert
 ## Zielversion: v0.15.3 - Live-Preview im Admin-Dashboard
 ## Plattform: WP 6.9.4, Elementor 4.0.1, PHP 8.3.30, React 18 (wp.element)
+
+## v0.15.4 Sync-Notizen (QA-Findings nachgepflegt):
+## - **Sektion 9.3 atts_rejected**: Discovery sagte `array<string>`, Implementation liefert `Object{key:reason}` (semantisch reicher, da Ablehnungs-Grund mitgeliefert). F2 toleriert beides via `Array.isArray()`-Check + `Object.keys()`-Fallback. Akzeptiert als bewusster Schema-Drift (Trust-Decision T4 v0.15.3).
+## - **Sektion 9.4 HTTP-Status**: Discovery erwaehnte `invalid_endpoint` als 500, Implementation liefert 404 (semantisch korrekter weil "Endpoint nicht gefunden" = 404). Akzeptiert als Schema-Sync.
+## - **Sektion 5.5 iframe Re-Mount-Pattern**: F2 hat `key={service + '-' + html.length}`-Pattern als Standard etabliert (war nicht in Discovery dokumentiert). Erzwingt React-Remount des iframe bei neuem srcdoc + verhindert State-Bleed zwischen Renders. Empfehlung: in kuenftigen Discovery-Plaenen mit srcdoc-iframes verpflichtend dokumentieren.
 
 ---
 

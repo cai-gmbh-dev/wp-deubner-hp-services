@@ -650,19 +650,51 @@
 	// --- Live-Preview (v0.15.3) ----------------------------------------------
 
 	/**
-	 * Service-Whitelist (9 Haupt-Services laut Discovery Sektion 6.2).
+	 * Service-Whitelist (9 Haupt-Services + 4 Sub-Shortcodes seit v0.15.4).
+	 *
+	 * Muss synchron mit ALLOWED_SERVICES in class-dhps-admin-rest.php gehalten
+	 * werden. Backend rejected unbekannte Slugs zusaetzlich (Defense-in-Depth).
 	 */
 	var PREVIEW_SERVICES = [
-		{ value: 'mio', label: 'MIO' },
-		{ value: 'lxmio', label: 'LXMIO' },
-		{ value: 'mmb', label: 'MMB' },
-		{ value: 'mil', label: 'MIL' },
-		{ value: 'tp', label: 'TP' },
-		{ value: 'tpt', label: 'TPT' },
-		{ value: 'tc', label: 'TC' },
-		{ value: 'maes', label: 'MAES' },
-		{ value: 'lp', label: 'LP' },
+		{ value: 'mio', label: 'MIO (Steuern)' },
+		{ value: 'mio_termine', label: 'MIO Termine (Sub)' },
+		{ value: 'lxmio', label: 'LXMIO (Recht)' },
+		{ value: 'mmb', label: 'MMB (Merkblaetter)' },
+		{ value: 'mil', label: 'MIL (Lohn)' },
+		{ value: 'tp', label: 'TP (TaxPlain Videos)' },
+		{ value: 'tpt', label: 'TPT (TP Teaser)' },
+		{ value: 'tc', label: 'TC (Tax-Rechner)' },
+		{ value: 'maes', label: 'MAES (Medizin)' },
+		{ value: 'maes_videos', label: 'MAES Videos (Sub)' },
+		{ value: 'maes_merkblaetter', label: 'MAES Merkblaetter (Sub)' },
+		{ value: 'maes_aktuelles', label: 'MAES Aktuelles (Sub)' },
+		{ value: 'lp', label: 'LP (LexPlain Videos)' },
 	];
+
+	/**
+	 * Sub-Shortcodes (preview-faehig in v0.15.4 - eingeschraenkte Atts).
+	 *
+	 * Wird intern fuer Conditional-UI verwendet (z.B. section-Auswahl nur fuer
+	 * maes_*-Sub-Shortcodes).
+	 *
+	 * @since v0.15.4
+	 */
+	var PREVIEW_SUB_SHORTCODES = [
+		'mio_termine',
+		'maes_videos',
+		'maes_merkblaetter',
+		'maes_aktuelles',
+	];
+
+	/**
+	 * Prueft ob ein Service-Slug ein maes_*-Sub-Shortcode ist (oder MAES selbst).
+	 *
+	 * @param {string} slug Service-Slug.
+	 * @returns {boolean} true wenn maes_*-Familie.
+	 */
+	function isMaesFamily( slug ) {
+		return slug === 'maes' || ( typeof slug === 'string' && slug.indexOf( 'maes_' ) === 0 );
+	}
 
 	var PREVIEW_LAYOUTS = [
 		{ value: 'default', label: 'default' },
@@ -703,7 +735,8 @@
 			onAttsChange( next );
 		}
 
-		var maesSectionRow = service === 'maes'
+		// v0.15.4: section-Auswahl auch fuer maes_*-Sub-Shortcodes.
+		var maesSectionRow = isMaesFamily( service )
 			? h( FlexItem, { key: 'section' },
 				h( SelectControl, {
 					label: __( 'Section (nur MAES)', 'deubner_hp_services' ),
@@ -712,6 +745,25 @@
 					onChange: function ( val ) { patchAtts( { section: val } ); },
 					'aria-label': __( 'MAES-Section auswaehlen', 'deubner_hp_services' ),
 				} )
+			)
+			: null;
+
+		// v0.15.4: Visueller Sub-Shortcode-Hinweis.
+		var subShortcodeBadge = ( PREVIEW_SUB_SHORTCODES.indexOf( service ) !== -1 )
+			? h( FlexItem, { key: 'sub-badge' },
+				h( 'span', {
+					style: {
+						display: 'inline-block',
+						padding: '2px 8px',
+						fontSize: '11px',
+						fontWeight: '600',
+						color: '#1d4ed8',
+						backgroundColor: '#dbeafe',
+						borderRadius: '4px',
+						border: '1px solid #93c5fd',
+					},
+					title: __( 'Modularer Sub-Shortcode - Atts eingeschraenkt (v0.15.4).', 'deubner_hp_services' ),
+				}, __( 'Sub-Shortcode', 'deubner_hp_services' ) )
 			)
 			: null;
 
@@ -745,6 +797,7 @@
 					} )
 				),
 				maesSectionRow,
+				subShortcodeBadge,
 				h( FlexItem, {},
 					h( Button, {
 						variant: 'primary',
@@ -763,7 +816,41 @@
 	}
 
 	/**
-	 * LivePreviewIframe - iframe srcdoc-Container.
+	 * Default-Hoehe (px) fuer das Preview-iframe bevor das postMessage-Event
+	 * eintrifft. Identisch zum v0.15.3-Verhalten (Static-Fallback).
+	 *
+	 * @since v0.15.3
+	 */
+	var PREVIEW_IFRAME_DEFAULT_HEIGHT = 600;
+
+	/**
+	 * Maximal akzeptierte iframe-Hoehe (px). Identisch zum Backend-MAX_HEIGHT.
+	 * DoS-Schutz gegen unendliche Resize-Messages (v0.15.4).
+	 *
+	 * @since v0.15.4
+	 */
+	var PREVIEW_IFRAME_MAX_HEIGHT = 4000;
+
+	/**
+	 * Erwarteter postMessage-Type fuer iframe-Resize.
+	 *
+	 * @since v0.15.4
+	 */
+	var PREVIEW_RESIZE_MESSAGE_TYPE = 'dhps-preview-resize';
+
+	/**
+	 * LivePreviewIframe - iframe srcdoc-Container mit dynamic-Resize (v0.15.4).
+	 *
+	 * postMessage-Security-Layer (Discovery 22 Sektion 5.3):
+	 *   - event.origin ist 'null' fuer about:srcdoc - klassischer Origin-Check
+	 *     ist nicht moeglich. Stattdessen:
+	 *   - Strict-Type-Check (event.data.type === PREVIEW_RESIZE_MESSAGE_TYPE).
+	 *   - Numeric-Bounds-Check (parseInt + isNaN-Filter).
+	 *   - Max-Cap (PREVIEW_IFRAME_MAX_HEIGHT = 4000 px) gegen DoS.
+	 *
+	 * Worst-Case-Analyse: Wenn ein anderer iframe-srcdoc auf der Admin-Seite
+	 * ein passendes Resize-Event sendet, waechst nur DIESE iframe-Hoehe -
+	 * keine XSS- oder Daten-Leak-Vektor.
 	 *
 	 * Props:
 	 *   html {string}     Vollstaendige HTML-Seite (DOCTYPE + html + head + body).
@@ -772,6 +859,38 @@
 	function LivePreviewIframe( props ) {
 		var html = props.html || '';
 		var service = props.service || 'unknown';
+
+		var stateHeight = useState( PREVIEW_IFRAME_DEFAULT_HEIGHT );
+		var iframeHeight = stateHeight[ 0 ];
+		var setIframeHeight = stateHeight[ 1 ];
+
+		useEffect( function () {
+			// Reset auf Default bei jedem Preview-Wechsel.
+			setIframeHeight( PREVIEW_IFRAME_DEFAULT_HEIGHT );
+
+			function handleMessage( event ) {
+				// Type-Check (Defense-Layer 1).
+				if ( ! event || ! event.data || event.data.type !== PREVIEW_RESIZE_MESSAGE_TYPE ) {
+					return;
+				}
+				// Numeric-Bounds-Check (Defense-Layer 2).
+				var h = parseInt( event.data.height, 10 );
+				if ( isNaN( h ) || h < 1 ) {
+					return;
+				}
+				// Max-Cap-Check (Defense-Layer 3, DoS-Schutz).
+				if ( h > PREVIEW_IFRAME_MAX_HEIGHT ) {
+					h = PREVIEW_IFRAME_MAX_HEIGHT;
+				}
+				setIframeHeight( h );
+			}
+
+			window.addEventListener( 'message', handleMessage );
+			return function () {
+				window.removeEventListener( 'message', handleMessage );
+			};
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+		}, [ html, service ] );
 
 		return h( 'div', { className: 'dhps-react-preview-iframe-wrap', style: { marginTop: '12px' } },
 			h( 'iframe', {
@@ -783,9 +902,11 @@
 				'aria-label': __( 'Live-Preview-Inhalt fuer Service ', 'deubner_hp_services' ) + service,
 				style: {
 					width: '100%',
-					height: '600px',
+					height: iframeHeight + 'px',
+					maxHeight: PREVIEW_IFRAME_MAX_HEIGHT + 'px',
 					border: '1px solid #ddd',
 					background: '#fff',
+					transition: 'height 200ms ease',
 				},
 			} )
 		);
@@ -865,6 +986,15 @@
 						status: 'warning',
 						isDismissible: false,
 					}, __( 'Folgende Atts wurden ignoriert: ', 'deubner_hp_services' ) + rejectedList.join( ', ' ) )
+				)
+				: null,
+			// v0.15.4 Ticket #3: 500-KB-Soft-Warning bei grossem Preview.
+			sizeBytes > 500000
+				? h( 'div', { role: 'status', style: { marginTop: '8px' } },
+					h( Notice, {
+						status: 'warning',
+						isDismissible: false,
+					}, __( 'Preview ist gross (', 'deubner_hp_services' ) + formatBytes( sizeBytes ) + __( '). Render-Zeit und Browser-Performance koennen leiden.', 'deubner_hp_services' ) )
 				)
 				: null
 		);

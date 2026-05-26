@@ -1,6 +1,6 @@
 # Content Security Policy (CSP) Compatibility
 
-Stand: 2026-05-22 (v0.14.0)
+Stand: 2026-05-26 (v0.15.4 - aktualisiert um Live-Preview-iframe + postMessage-Resize)
 
 ## Zusammenfassung
 
@@ -48,6 +48,30 @@ Alle Werte sind type-cast oder escaped (kein User-Input).
 **Warum?** Der MMB-AJAX-Endpoint `dhps_mmb_category_load` wird via
 `fetch()` aus `dhps-mmb.js` aufgerufen. Ziel-URL ist `admin-ajax.php`
 auf derselben Domain.
+
+### `frame-src 'self' about:` (nur Admin-Dashboard, seit v0.15.3)
+
+**Warum?** Das Admin-Dashboard-Live-Preview (seit v0.15.3) zeigt
+gerenderte Frontend-Vorschau in einem iframe mit `srcdoc`. Browser
+behandeln `srcdoc`-iframes als `about:srcdoc`-Origin - mit striktem
+CSP `frame-src 'self'` blockt der Browser den iframe.
+
+Loesung: `frame-src 'self' about:` oder breiter. Wenn Live-Preview nicht
+genutzt wird (oder CSP nur fuer Frontend gilt, nicht WP-Admin), kann diese
+Direktive entfallen.
+
+**Affected:** Nur `admin/js/dhps-admin-react.js` -> LivePreviewIframe-Component.
+
+### postMessage-Resize (seit v0.15.4)
+
+Das iframe sendet seine berechnete Hoehe via `postMessage` an den Parent.
+Das ist KEINE CSP-Direktive, aber Information fuer Site-Admins:
+
+- iframe-Origin: `about:srcdoc` -> `event.origin === 'null'` im Parent
+- Origin-Check via `event.origin` ist NICHT moeglich (W3C-Spec)
+- Mitigation: Type-Check (`event.data.type === 'dhps-preview-resize'`)
+  + Bounds-Check (1-4000 px) + Max-Height-Cap
+- Kein User-Input-Pfad (Hoehe wird im iframe-eigenen JS berechnet)
 
 ## Empfohlene CSP-Header
 

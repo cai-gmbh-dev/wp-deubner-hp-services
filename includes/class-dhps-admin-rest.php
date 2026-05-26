@@ -7,11 +7,16 @@
  *
  * Endpoints:
  *   GET  /dhps/v1/services/health
- *   GET  /dhps/v1/services/(?P<service>[a-z]+)/health
- *   POST /dhps/v1/services/(?P<service>[a-z]+)/test    (rate-limited 30/min/user)
- *   POST /dhps/v1/services/(?P<service>[a-z]+)/preview (rate-limited 30/min/user, seit v0.15.3)
+ *   GET  /dhps/v1/services/(?P<service>[a-z_]+)/health
+ *   POST /dhps/v1/services/(?P<service>[a-z_]+)/test    (rate-limited 30/min/user)
+ *   POST /dhps/v1/services/(?P<service>[a-z_]+)/preview (rate-limited 30/min/user, seit v0.15.3)
  *   GET  /dhps/v1/cache/stats
- *   POST /dhps/v1/cache/flush                          (rate-limited 6/min/user)
+ *   POST /dhps/v1/cache/flush                           (rate-limited 6/min/user)
+ *
+ * Regex-Hinweis (v0.15.4): `[a-z_]+` erlaubt Unterstrich, damit Sub-Shortcodes
+ * (`mio_termine`, `maes_videos`, `maes_merkblaetter`, `maes_aktuelles`) ueber
+ * die gleichen Routes erreichbar sind. Defense-in-Depth: validate_service_param()
+ * prueft zusaetzlich gegen die ALLOWED_SERVICES-Whitelist.
  *
  * Security:
  *   - manage_options Capability auf jedem Endpoint (permission_callback).
@@ -47,10 +52,30 @@ class DHPS_Admin_REST {
 	/**
 	 * Whitelist erlaubter Service-Slugs.
 	 *
+	 * Seit v0.15.4 inkl. der 4 modularen Sub-Shortcodes (preview-faehig fuer
+	 * das Admin-Dashboard, siehe Discovery 22-TECH-DEBT-TRIAGE-v0154 Sektion 4).
+	 *
 	 * @since 0.15.0
+	 * @since 0.15.4 Sub-Shortcodes (mio_termine, maes_videos, maes_merkblaetter, maes_aktuelles).
 	 * @var array<int,string>
 	 */
-	public const ALLOWED_SERVICES = array( 'mio', 'lxmio', 'mmb', 'mil', 'tp', 'tpt', 'tc', 'maes', 'lp' );
+	public const ALLOWED_SERVICES = array(
+		// Hauptservices (seit v0.15.0).
+		'mio',
+		'lxmio',
+		'mmb',
+		'mil',
+		'tp',
+		'tpt',
+		'tc',
+		'maes',
+		'lp',
+		// Sub-Shortcodes (seit v0.15.4).
+		'mio_termine',
+		'maes_videos',
+		'maes_merkblaetter',
+		'maes_aktuelles',
+	);
 
 	/**
 	 * Maximale Test-Requests pro Minute pro User.
@@ -71,10 +96,14 @@ class DHPS_Admin_REST {
 	/**
 	 * Sanity-Limit fuer den service-Route-Parameter (Defense in Depth).
 	 *
+	 * Seit v0.15.4 auf 32 erhoeht, weil `maes_merkblaetter` 17 Zeichen lang ist
+	 * und der bisherige 16er-Cap die Sub-Shortcodes faelschlich rejectet haette.
+	 *
 	 * @since 0.15.0
+	 * @since 0.15.4 Erhoht 16 -> 32 wegen Sub-Shortcodes.
 	 * @var int
 	 */
-	private const SERVICE_PARAM_MAX_LENGTH = 16;
+	private const SERVICE_PARAM_MAX_LENGTH = 32;
 
 	/**
 	 * API-Client (Cache-Aside Fassade).
@@ -175,9 +204,10 @@ class DHPS_Admin_REST {
 		);
 
 		// 2. GET /services/{service}/health - einzelner Service.
+		// v0.15.4: Regex `[a-z_]+` erlaubt Unterstrich fuer Sub-Shortcodes.
 		register_rest_route(
 			self::NAMESPACE,
-			'/services/(?P<service>[a-z]+)/health',
+			'/services/(?P<service>[a-z_]+)/health',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'handle_service_health' ),
@@ -193,9 +223,10 @@ class DHPS_Admin_REST {
 		);
 
 		// 3. POST /services/{service}/test - rate-limited.
+		// v0.15.4: Regex `[a-z_]+` erlaubt Unterstrich fuer Sub-Shortcodes.
 		register_rest_route(
 			self::NAMESPACE,
-			'/services/(?P<service>[a-z]+)/test',
+			'/services/(?P<service>[a-z_]+)/test',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'handle_service_test' ),
@@ -211,9 +242,10 @@ class DHPS_Admin_REST {
 		);
 
 		// 3b. POST /services/{service}/preview - rate-limited (seit v0.15.3).
+		// v0.15.4: Regex `[a-z_]+` erlaubt Unterstrich fuer Sub-Shortcodes.
 		register_rest_route(
 			self::NAMESPACE,
-			'/services/(?P<service>[a-z]+)/preview',
+			'/services/(?P<service>[a-z_]+)/preview',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'handle_service_preview' ),
@@ -538,7 +570,12 @@ class DHPS_Admin_REST {
 			);
 		}
 
-		$config = DHPS_Service_Registry::get_service( $service );
+		// Sub-Shortcodes (v0.15.4) haben keinen eigenen Eintrag in der
+		// Service-Registry - Auth/Endpoint werden vom Parent-Service geerbt.
+		$sub_parents = DHPS_Preview_Renderer::SUB_SHORTCODE_PARENTS;
+		$lookup_slug = isset( $sub_parents[ $service ] ) ? $sub_parents[ $service ] : $service;
+
+		$config = DHPS_Service_Registry::get_service( $lookup_slug );
 		if ( null === $config ) {
 			return new WP_Error(
 				'invalid_service',
@@ -576,11 +613,11 @@ class DHPS_Admin_REST {
 		$atts_raw = isset( $body['atts'] ) && is_array( $body['atts'] ) ? $body['atts'] : array();
 		$format   = isset( $body['format'] ) ? sanitize_key( (string) $body['format'] ) : 'iframe';
 
-		// v0.15.3: nur 'iframe' erlaubt.
+		// v0.15.3: nur 'iframe' erlaubt. v0.15.4 (QA M3): eigener Error-Code.
 		if ( 'iframe' !== $format ) {
 			return new WP_Error(
-				'invalid_service',
-				'Ungueltiges Format. In v0.15.3 ist nur "iframe" erlaubt.',
+				'invalid_format',
+				'Ungueltiges Format. Aktuell ist nur "iframe" erlaubt.',
 				array( 'status' => 400 )
 			);
 		}
@@ -588,6 +625,12 @@ class DHPS_Admin_REST {
 		// 4. Atts vor-sanitisieren (Top-Level Whitelist).
 		//    Die finale Whitelist-Pruefung erfolgt im Renderer und fuellt
 		//    atts_applied / atts_rejected.
+		//
+		//    v0.15.4: Whitelist um `cache` erweitert (alle Sub-Shortcodes haben
+		//    es). `section` ist weiterhin nur fuer MAES + maes_*-Sub-Shortcodes
+		//    relevant (der Renderer setzt das hart durch).
+		$known_top_keys = array( 'layout', 'class', 'section', 'cache' );
+
 		$sanitized_atts = array();
 		if ( isset( $atts_raw['layout'] ) && is_scalar( $atts_raw['layout'] ) ) {
 			$sanitized_atts['layout'] = (string) $atts_raw['layout'];
@@ -600,6 +643,18 @@ class DHPS_Admin_REST {
 		if ( isset( $atts_raw['section'] ) && is_scalar( $atts_raw['section'] ) ) {
 			$sanitized_atts['section'] = (string) $atts_raw['section'];
 		}
+		if ( isset( $atts_raw['cache'] ) && is_scalar( $atts_raw['cache'] ) ) {
+			// Boolean-ish Coercion: 'true','1','on' -> true; sonst false.
+			// Wir reichen den boolean-validierten String an den Renderer durch.
+			$cache_bool = filter_var(
+				(string) $atts_raw['cache'],
+				FILTER_VALIDATE_BOOLEAN,
+				FILTER_NULL_ON_FAILURE
+			);
+			if ( null !== $cache_bool ) {
+				$sanitized_atts['cache'] = $cache_bool ? '1' : '0';
+			}
+		}
 
 		// Unbekannte Atts auch durchreichen, damit Renderer sie in
 		// atts_rejected als "unknown att key" listet.
@@ -608,7 +663,7 @@ class DHPS_Admin_REST {
 			if ( '' === $k_str ) {
 				continue;
 			}
-			if ( ! in_array( $k_str, array( 'layout', 'class', 'section' ), true ) && is_scalar( $v ) ) {
+			if ( ! in_array( $k_str, $known_top_keys, true ) && is_scalar( $v ) ) {
 				$sanitized_atts[ $k_str ] = (string) $v;
 			}
 		}

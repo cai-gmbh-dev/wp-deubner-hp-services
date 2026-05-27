@@ -36,3 +36,6 @@ debug.log
 # Smoke-Test-Skripte (temporaer)
 smoke-test*.php
 smoke-final*.php
+
+# Temp-Verzeichnis fuer Discovery-Entpack-Operationen (z.B. Elementor-ZIPs zu Analysezwecken)
+temp/

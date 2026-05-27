@@ -85,6 +85,72 @@ class DHPS_Elementor {
 
 		add_action( 'elementor/widgets/register', array( $this, 'register_widgets' ) );
 		add_action( 'elementor/elements/categories_registered', array( $this, 'register_category' ) );
+
+		// Defensive Version-Check (seit 0.16.1).
+		add_action( 'admin_notices', array( $this, 'maybe_render_version_notice' ) );
+	}
+
+	/**
+	 * Mindest-Versionen der Elementor-Stack-Komponenten.
+	 *
+	 * Wird im Notice-Check (v0.16.1) und in der Doku 05-ELEMENTOR-4X-MIGRATION.md referenziert.
+	 *
+	 * @since 0.16.1
+	 */
+	public const ELEMENTOR_MIN_VERSION = '4.1.0';
+
+	/**
+	 * Mindest-Version Elementor Pro (optional). Pro ist nicht zwingend, aber
+	 * wenn aktiv: 4.1.0+ verlangt Free 4.1.0+.
+	 *
+	 * @since 0.16.1
+	 */
+	public const ELEMENTOR_PRO_MIN_VERSION = '4.1.0';
+
+	/**
+	 * Zeigt Admin-Notice falls Elementor-Versionen unter dem unterstuetzten
+	 * Minimum liegen. Adressiert das User-Live-Symptom "klappt nicht mehr"
+	 * bei Free/Pro-Mismatch.
+	 *
+	 * @since 0.16.1
+	 *
+	 * @return void
+	 */
+	public function maybe_render_version_notice(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$messages = array();
+
+		if ( defined( 'ELEMENTOR_VERSION' )
+			&& version_compare( ELEMENTOR_VERSION, self::ELEMENTOR_MIN_VERSION, '<' ) ) {
+			$messages[] = sprintf(
+				/* translators: 1: aktuelle Free-Version, 2: Mindest-Version */
+				esc_html__( 'Deubner HP Services: Elementor %1$s erkannt - empfohlen ist mindestens %2$s.', 'deubner_hp_services' ),
+				esc_html( ELEMENTOR_VERSION ),
+				esc_html( self::ELEMENTOR_MIN_VERSION )
+			);
+		}
+
+		if ( defined( 'ELEMENTOR_PRO_VERSION' )
+			&& version_compare( ELEMENTOR_PRO_VERSION, self::ELEMENTOR_PRO_MIN_VERSION, '<' ) ) {
+			$messages[] = sprintf(
+				/* translators: 1: aktuelle Pro-Version, 2: Mindest-Version */
+				esc_html__( 'Deubner HP Services: Elementor Pro %1$s erkannt - empfohlen ist mindestens %2$s.', 'deubner_hp_services' ),
+				esc_html( ELEMENTOR_PRO_VERSION ),
+				esc_html( self::ELEMENTOR_PRO_MIN_VERSION )
+			);
+		}
+
+		if ( empty( $messages ) ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-warning"><p>%s</p></div>',
+			implode( '<br />', $messages ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Each line already esc_html'd.
+		);
 	}
 
 	/**

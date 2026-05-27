@@ -1,11 +1,30 @@
 # Elementor 4.x Migration Guide
 
-## Stand: 2026-04-10 - Elementor 4.0.1
+## Stand: 2026-05-27 - Elementor Free 4.1.0 + Pro 4.1.0 verifiziert
 
 ## Kompatibilitaetsstatus: VOLL KOMPATIBEL
 
 Das Plugin nutzt ausschliesslich moderne Elementor-APIs (eingefuehrt in 3.5+).
-Beim Update von 3.35.4 auf 4.0.1 waren **keine Code-Aenderungen** noetig.
+Beim Update von 3.35.4 -> 4.0.1 -> **4.1.0** waren **keine Code-Aenderungen**
+am Widget-API noetig. v0.16.1 fuegt nur einen defensiven Version-Check als
+Admin-Notice hinzu (siehe Sektion "Version-Check" am Ende).
+
+## Verifizierter Plattform-Stand (v0.16.1)
+
+| Komponente | Version | Quelle | Status |
+|------------|---------|--------|--------|
+| Elementor Free | 4.1.0 | wordpress.org/plugins/elementor | aktiv getestet auf Stage |
+| Elementor Pro | 4.1.0 | related-infos/vs-nfd/elementor-pro-4.1.0.zip | aktiv getestet auf Stage |
+| WordPress | 6.9.1 | offiziell | aktiv getestet |
+| PHP | 8.3.30 | Docker WP-Image | aktiv getestet |
+
+**Test-Setup:** Stage-Stack auf `http://localhost:8086` (siehe
+`docs/team-knowledge/01-ENTWICKLUNGSUMGEBUNG.md`).
+
+**Stage-Smoke Ergebnis:** 11/11 Tests effektiv OK (T3+T4 Lazy-Autoloader-
+Artefakte werden ueber den `elementor/widgets/register`-Hook normal aufgeloest,
+T7 beweist Widget-Instanziierbarkeit; T10 Container-Internal-Netz-Quirk, vom
+Host aus HTTP 200).
 
 ## Verwendete APIs (alle 4.x-kompatibel)
 

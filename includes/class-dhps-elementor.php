@@ -27,6 +27,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DHPS_Elementor {
 
 	/**
+	 * Mindest-Versionen der Elementor-Stack-Komponenten.
+	 *
+	 * Wird im Notice-Check (v0.16.1) und in der Doku
+	 * `docs/team-knowledge/05-ELEMENTOR-4X-MIGRATION.md` referenziert.
+	 *
+	 * @since 0.16.1
+	 * @since 0.16.2 Konstanten an Klassen-Anfang verschoben (QA M1).
+	 */
+	public const ELEMENTOR_MIN_VERSION = '4.1.0';
+
+	/**
+	 * Mindest-Version Elementor Pro (optional). Pro ist nicht zwingend, aber
+	 * wenn aktiv: 4.1.0+ verlangt Free 4.1.0+.
+	 *
+	 * @since 0.16.1
+	 * @since 0.16.2 Konstanten an Klassen-Anfang verschoben (QA M1).
+	 */
+	public const ELEMENTOR_PRO_MIN_VERSION = '4.1.0';
+
+	/**
+	 * Admin-Screen-IDs auf denen der Defensive-Version-Notice angezeigt wird.
+	 *
+	 * Beschraenkt die Notice auf relevante Kontexte. Andere Admin-Pages bleiben
+	 * frei von der Warnung. Wirkt ueber `screen_id` aus `get_current_screen()`.
+	 *
+	 * @since 0.16.2 QA M3 - Notice-Scope-Beschraenkung.
+	 */
+	public const VERSION_NOTICE_SCREENS = array(
+		'dashboard',                      // WP-Admin Startseite
+		'plugins',                        // Plugins-Liste
+		'toplevel_page_dhps_dashboard',   // DHPS Hauptmenue
+		'deubner-verlag_page_dhps_dashboard', // DHPS Submenue
+		'elementor_page_elementor-settings',  // Elementor-Settings (best-effort)
+	);
+
+	/**
 	 * Content-Pipeline fuer Parsing und strukturiertes Rendering.
 	 *
 	 * @since 0.9.3
@@ -91,34 +127,30 @@ class DHPS_Elementor {
 	}
 
 	/**
-	 * Mindest-Versionen der Elementor-Stack-Komponenten.
-	 *
-	 * Wird im Notice-Check (v0.16.1) und in der Doku 05-ELEMENTOR-4X-MIGRATION.md referenziert.
-	 *
-	 * @since 0.16.1
-	 */
-	public const ELEMENTOR_MIN_VERSION = '4.1.0';
-
-	/**
-	 * Mindest-Version Elementor Pro (optional). Pro ist nicht zwingend, aber
-	 * wenn aktiv: 4.1.0+ verlangt Free 4.1.0+.
-	 *
-	 * @since 0.16.1
-	 */
-	public const ELEMENTOR_PRO_MIN_VERSION = '4.1.0';
-
-	/**
 	 * Zeigt Admin-Notice falls Elementor-Versionen unter dem unterstuetzten
 	 * Minimum liegen. Adressiert das User-Live-Symptom "klappt nicht mehr"
 	 * bei Free/Pro-Mismatch.
 	 *
 	 * @since 0.16.1
+	 * @since 0.16.2 Cap-Check auf `activate_plugins` (QA M2), Scope-Beschraenkung
+	 *               auf relevante Admin-Screens (QA M3).
 	 *
 	 * @return void
 	 */
 	public function maybe_render_version_notice(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		// activate_plugins ist semantisch genauer als manage_options - es geht
+		// um den Aktor, der Plugin-Updates anstossen kann (QA M2).
+		if ( ! current_user_can( 'activate_plugins' ) ) {
 			return;
+		}
+
+		// Scope auf relevante Admin-Screens beschraenken (QA M3).
+		if ( function_exists( 'get_current_screen' ) ) {
+			$screen = get_current_screen();
+			if ( null !== $screen
+				&& ! in_array( $screen->id, self::VERSION_NOTICE_SCREENS, true ) ) {
+				return;
+			}
 		}
 
 		$messages = array();

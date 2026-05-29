@@ -50,6 +50,9 @@ services:
       - wp_data_stage:/var/www/html
       - .:/var/www/html/wp-content/plugins/wp-deubner-hp-services
       - ./docker/deubner-theme:/var/www/html/wp-content/themes/deubner-demo
+      # Stage-Marker mu-plugin (seit v0.16.3, P1+P2)
+      # Aktiviert nur in Stage weil DHPS_ENV_LABEL='STAGE' Pflicht-Konstante ist.
+      - ./docker/stage-mu-plugins:/var/www/html/wp-content/mu-plugins
     environment:
       WORDPRESS_DB_HOST: db:3306
       WORDPRESS_DB_NAME: wordpress_stage

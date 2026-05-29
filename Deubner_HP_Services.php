@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.16.2
+ * Version: 0.16.3
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -19,7 +19,7 @@
  * Developer Author: Kai R. Emde
  *
  * @package Deubner Homepage-Service
- * @version 0.16.2
+ * @version 0.16.3
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -38,7 +38,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.16.2' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.16.3' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -105,6 +105,16 @@ spl_autoload_register( function ( $class_name ) {
 */
 
 require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-component-helpers.php';
+
+/*
+|--------------------------------------------------------------------------
+| WP-CLI Commands (v0.16.3)
+|--------------------------------------------------------------------------
+|
+| Datei prueft selbst auf WP_CLI === true und macht early-return wenn
+| nicht in CLI-Kontext. Im Web-Request passiert nichts.
+*/
+require_once DEUBNER_HP_SERVICES_PATH . 'includes/class-dhps-cli-commands.php';
 
 /*
 |--------------------------------------------------------------------------

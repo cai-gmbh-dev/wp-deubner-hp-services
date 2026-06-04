@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.16.3
+ * Version: 0.17.0
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -12,14 +12,21 @@
  * Text Domain: deubner_hp_services
  * Domain Path: /languages
  * Requires at least: 6.0
- * Requires PHP: 8.0
+ * Requires PHP: 8.1
  * Update URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  *
  * Developer: CAI GmbH, Hansestadt Wipperfuerth, Deutschland
  * Developer Author: Kai R. Emde
  *
+ * PHP-Mindestversion seit v0.17.0 auf 8.1 angehoben, weil das einheitliche
+ * Datenmodell (DTO-Foundation, siehe includes/class-dhps-content-item.php)
+ * `readonly` Properties nutzt - ein PHP 8.1 Sprach-Feature, das auf 8.0
+ * nicht emulierbar ist. Live-Sites laufen laut Plattform-Dokumentation
+ * bereits auf PHP 8.3.30, daher ist der Bump praxisnah unkritisch
+ * (siehe Discovery 26-EINHEITLICHES-DATENMODELL-PLAN-v0170 Sektion 8 TD-2).
+ *
  * @package Deubner Homepage-Service
- * @version 0.16.3
+ * @version 0.17.0
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -38,7 +45,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.16.3' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.0' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -286,6 +293,11 @@ function dhps_init() {
     // MAES-Parser registrieren (Meine Aerzteseite).
     $maes_parser = new DHPS_MAES_Parser();
     DHPS_Parser_Registry::register( 'maes', $maes_parser );
+
+    // 3a. Content-Adapter-Registry (v0.17.0): wandelt Parser-Output in
+    //     DHPS_Content_Collection. Pilot ist MAES; weitere Services folgen
+    //     in v0.17.1+ (Roadmap siehe Discovery 26-EINHEITLICHES-DATENMODELL).
+    DHPS_Content_Adapter_Registry::register( 'maes', new DHPS_MAES_Adapter() );
 
     // 3b. Component-Registry: UI-Bausteine registrieren (v0.15.5).
     dhps_register_components();

@@ -138,8 +138,44 @@ class DHPS_Content_Pipeline {
 			}
 		}
 
-		// 5. Geparste Daten ueber Service-Template rendern.
-		return $this->renderer->render_parsed( $parsed_data, $tag, $layout, $css_class );
+		// 5. Daten-Filter VOR Adapter (QA-Major-2, v0.17.0): der bestehende
+		//    Filter `dhps_pipeline_data_{tag}` muss laut Discovery 5.6
+		//    Adapter VORANGEHEN, damit Module-Layer wie DHPS_TPT_Modules ihre
+		//    Konfigurations-Anreicherungen in $parsed_data verankern, BEVOR
+		//    der Adapter die Daten in DTOs ueberfuehrt. Sonst sieht der
+		//    Adapter ungefilterte Daten und Templates die Filter-Resultate
+		//    nur ueber $data - die Collection driftet.
+		//
+		// BC: render_parsed() ruft den Filter NICHT mehr selbst auf (seit
+		//     v0.17.0) - Aufrufer ausserhalb der Pipeline muessen vorher
+		//     filtern. Im Plugin ist Pipeline der einzige Aufrufer.
+		$parsed_data = apply_filters( 'dhps_pipeline_data_' . $tag, $parsed_data, $layout );
+
+		// 6. Adapter-Layer (seit v0.17.0): wenn ein Adapter registriert ist,
+		//    wandelt er das (jetzt gefilterte) Parser-Output in eine
+		//    DHPS_Content_Collection. Bestehende Templates erhalten weiter
+		//    $data; Pilot-Templates koennen zusaetzlich $collection nutzen.
+		//
+		// Fail-Soft (SEC-MEDIUM-1, v0.17.0): Adapter-Exceptions duerfen den
+		// Frontend-Render NICHT in einen PHP-Fatal zwingen. Templates fallen
+		// dann ueber `$has_collection`-Check auf den Legacy-Pfad zurueck.
+		$collection = null;
+		if ( class_exists( 'DHPS_Content_Adapter_Registry' ) ) {
+			$adapter = DHPS_Content_Adapter_Registry::for_service( $tag );
+			if ( null !== $adapter ) {
+				try {
+					$collection = $adapter->adapt( $parsed_data, $tag );
+				} catch ( \Throwable $e ) {
+					$collection = null;
+					if ( function_exists( 'error_log' ) ) {
+						error_log( sprintf( 'DHPS adapter failure for service "%s": %s', $tag, $e->getMessage() ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Fail-Soft-Logging.
+					}
+				}
+			}
+		}
+
+		// 6. Geparste Daten ueber Service-Template rendern.
+		return $this->renderer->render_parsed( $parsed_data, $tag, $layout, $css_class, $collection );
 	}
 
 	/**

@@ -117,21 +117,25 @@ class DHPS_Renderer {
 	 * sowie die CSS-Klassen-Variablen zur Verfuegung.
 	 *
 	 * Verfuegbare Template-Variablen:
-	 * - $data          (array)  Strukturiertes Array aus dem Parser.
-	 * - $service_class (string) CSS-Klasse: 'dhps-service--{tag}'.
-	 * - $layout_class  (string) CSS-Klasse: 'dhps-layout--{layout}'.
-	 * - $custom_class  (string) Optionale CSS-Klasse (mit fuehrendem Leerzeichen oder leer).
+	 * - $data          (array)               Strukturiertes Array aus dem Parser.
+	 * - $collection    (DHPS_Content_Collection|null) Adapter-Output ab v0.17.0,
+	 *                                       null wenn kein Adapter registriert.
+	 * - $service_class (string)              CSS-Klasse: 'dhps-service--{tag}'.
+	 * - $layout_class  (string)              CSS-Klasse: 'dhps-layout--{layout}'.
+	 * - $custom_class  (string)              Optionale CSS-Klasse (mit fuehrendem Leerzeichen oder leer).
 	 *
 	 * @since 0.9.0
+	 * @since 0.17.0 Optional Parameter `$collection` fuer Adapter-Layer-DTO-Output.
 	 *
-	 * @param array  $data      Strukturiertes Array aus dem Parser.
-	 * @param string $tag       Shortcode-Tag (z.B. 'mio').
-	 * @param string $layout    Layout-Name (z.B. 'default', 'card').
-	 * @param string $css_class Optionale CSS-Klasse(n).
+	 * @param array                         $data       Strukturiertes Array aus dem Parser.
+	 * @param string                        $tag        Shortcode-Tag (z.B. 'mio').
+	 * @param string                        $layout     Layout-Name (z.B. 'default', 'card').
+	 * @param string                        $css_class  Optionale CSS-Klasse(n).
+	 * @param DHPS_Content_Collection|null  $collection Adapter-Output, null wenn kein Adapter.
 	 *
 	 * @return string Gerendertes HTML oder leerer String bei fehlendem Template.
 	 */
-	public function render_parsed( array $data, string $tag, string $layout = 'default', string $css_class = '' ): string {
+	public function render_parsed( array $data, string $tag, string $layout = 'default', string $css_class = '', ?DHPS_Content_Collection $collection = null ): string {
 		// Service-Template suchen mit Fallback-Kette.
 		$template_file = $this->locate_service_template( $tag, $layout );
 
@@ -161,21 +165,12 @@ class DHPS_Renderer {
 		$layout_class  = 'dhps-layout--' . sanitize_html_class( $layout );
 		$custom_class  = '' !== $css_class ? ' ' . sanitize_html_class( $css_class ) : '';
 
-		/**
-		 * Filtert die geparsten Daten vor dem Template-Render.
-		 *
-		 * Erlaubt Modules-Layern (z.B. DHPS_TPT_Modules) das $data-Array um
-		 * Admin-konfigurierte Texte/Settings anzureichern, ohne dass die
-		 * Templates direkt get_option() aufrufen muessen.
-		 *
-		 * Hook-Name: dhps_pipeline_data_{tag} (z.B. dhps_pipeline_data_tpt).
-		 *
-		 * @since 0.14.5
-		 *
-		 * @param array  $data   Parser-Output (inkl. service_tag).
-		 * @param string $layout Aktuelles Layout (default|card|compact|...).
-		 */
-		$data = apply_filters( 'dhps_pipeline_data_' . $tag, $data, $layout );
+		// Hinweis (seit v0.17.0, QA-Major-2):
+		// Filter `dhps_pipeline_data_{tag}` wird NICHT mehr hier gerufen,
+		// sondern in DHPS_Content_Pipeline::render_service() VOR dem
+		// Adapter-Layer. Damit sehen Adapter und Templates dasselbe
+		// gefilterte $data-Array. Externe Aufrufer von render_parsed()
+		// muessen den Filter ggf. selbst zuvor aufrufen.
 
 		// Template rendern via Output-Buffering.
 		ob_start();

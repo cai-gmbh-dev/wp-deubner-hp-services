@@ -44,8 +44,55 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$featured    = $data['featured_video'] ?? null;
-$categories  = $data['categories'] ?? array();
+// v0.17.2: Collection-Pfad wenn TP-Adapter aktiv ist, sonst Legacy-Pfad.
+// Pseudo-Rebuild-Pattern (analog MMB v0.17.1): rekonstruiere die Legacy-
+// Variablen $featured + $categories aus der Collection. Der Render-Code
+// unter dieser Linie bleibt BYTEWISE unveraendert.
+$has_collection = isset( $collection ) && $collection instanceof DHPS_Content_Collection;
+
+if ( $has_collection ) {
+	$featured_id      = $collection->get_meta( 'featured_video_id', null );
+	$categories_order = (array) $collection->get_meta( 'categories_order', array() );
+	$categories_meta  = (array) $collection->get_meta( 'categories_meta', array() );
+
+	$featured          = null;
+	$items_by_category = array();
+
+	foreach ( $collection as $item ) {
+		/** @var DHPS_Content_Item $item */
+		$legacy_video = dhps_tp_item_to_legacy_video( $item );
+		if ( empty( $legacy_video ) ) {
+			continue;
+		}
+
+		$is_featured = ! empty( $item->meta['is_featured'] ) || ( null !== $featured_id && $item->id === $featured_id );
+		if ( $is_featured ) {
+			$featured = $legacy_video;
+			continue;
+		}
+
+		$cat_idx_item = $item->category ?? '';
+		if ( '' === $cat_idx_item ) {
+			continue;
+		}
+		$items_by_category[ $cat_idx_item ][] = $legacy_video;
+	}
+
+	$categories = array();
+	foreach ( $categories_order as $cat_idx_iter ) {
+		$cat_meta_iter = isset( $categories_meta[ $cat_idx_iter ] ) && is_array( $categories_meta[ $cat_idx_iter ] )
+			? $categories_meta[ $cat_idx_iter ]
+			: array();
+		$categories[] = array(
+			'name'   => isset( $cat_meta_iter['name'] ) ? (string) $cat_meta_iter['name'] : '',
+			'videos' => isset( $items_by_category[ $cat_idx_iter ] ) ? $items_by_category[ $cat_idx_iter ] : array(),
+		);
+	}
+} else {
+	$featured   = $data['featured_video'] ?? null;
+	$categories = $data['categories'] ?? array();
+}
+
 $service_tag = $data['service_tag'] ?? 'tp';
 
 // service_tag bestimmt das Card-Branding ('tp' -> Steuern-Gruen, 'lp' -> Recht-Blau).

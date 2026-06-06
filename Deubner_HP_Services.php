@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.17.1
+ * Version: 0.17.2
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -26,7 +26,7 @@
  * (siehe Discovery 26-EINHEITLICHES-DATENMODELL-PLAN-v0170 Sektion 8 TD-2).
  *
  * @package Deubner Homepage-Service
- * @version 0.17.1
+ * @version 0.17.2
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -45,7 +45,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.1' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.2' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -125,6 +125,16 @@ require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-component-helpers.php';
 | Datei ist keine Klasse, daher manueller Include analog v0.15.5-Pattern.
 */
 require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-content-helpers.php';
+
+/*
+|--------------------------------------------------------------------------
+| TP-Content-Helpers (v0.17.2)
+|--------------------------------------------------------------------------
+|
+| Geteilter Item-zu-Legacy-Video-Helper fuer TP/TPT-Templates (5 Templates
+| nutzen den Helper im Pseudo-Rebuild-Pfad).
+*/
+require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-tp-content-helpers.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -319,6 +329,30 @@ function dhps_init() {
     $mmb_adapter = new DHPS_MMB_Adapter();
     DHPS_Content_Adapter_Registry::register( 'mmb', $mmb_adapter );
     DHPS_Content_Adapter_Registry::register( 'mil', $mmb_adapter );
+
+    // 3a-3. TP-Adapter (v0.17.2): wird sowohl fuer 'tp' als auch 'lp'
+    //       registriert, weil LP den TP-Parser teilt (DHPS_LP_Parser extends
+    //       DHPS_TP_Parser) und die Parser-Output-Shape strukturell identisch
+    //       ist - der einzige Unterschied ist das 'service'-Feld pro Video
+    //       ('taxplain' bei TP, 'lexplain' bei LP), das den AJAX-Proxy-Route
+    //       steuert. Der Adapter ist Service-agnostisch (Discovery v0.17.2
+    //       Sektion 4.2, Option C): Der Branding-Tag kommt vom $service-Param
+    //       der Pipeline und landet 1:1 in Item.service und Item-ID-Prefix
+    //       ('tp-video-...' bzw. 'lp-video-...'). LP-Templates existieren
+    //       NICHT - der Fallback-Filter `dhps_template_fallbacks` (lp -> tp)
+    //       reicht LP-Aufrufe automatisch auf die TP-Templates durch.
+    $tp_adapter = new DHPS_TP_Adapter();
+    DHPS_Content_Adapter_Registry::register( 'tp', $tp_adapter );
+    DHPS_Content_Adapter_Registry::register( 'lp', $tp_adapter );
+
+    // 3a-4. TPT-Adapter (v0.17.2): eigene Klasse fuer den Single-Video-
+    //       Teaser-Service. TPT-Parser-Output hat 'video' (single) statt
+    //       'featured_video' + 'categories' wie TP/LP, daher KEINE Wieder-
+    //       verwendung des TP-Adapters (Discovery v0.17.2 Sektion 4.2,
+    //       Option C). Der Pipeline-Filter dhps_pipeline_data_tpt feuert
+    //       VOR dem Adapter, sodass DHPS_TPT_Modules das 'tpt_config'-Array
+    //       (Admin-Texte) bereits angereichert hat, wenn der Adapter laeuft.
+    DHPS_Content_Adapter_Registry::register( 'tpt', new DHPS_TPT_Adapter() );
 
     // 3b. Component-Registry: UI-Bausteine registrieren (v0.15.5).
     dhps_register_components();

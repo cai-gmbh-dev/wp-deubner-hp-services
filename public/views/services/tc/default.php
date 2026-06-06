@@ -23,8 +23,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$tc_html  = $data['html'] ?? '';
-$is_empty = ! empty( $data['is_empty'] );
+// Pseudo-Rebuild aus Collection wenn vorhanden (v0.17.4), sonst Legacy aus $data.
+// echo $tc_html Trust-Decision (v0.13.0/v0.14.4) BLEIBT UNANGETASTET.
+$has_collection = isset( $collection ) && $collection instanceof DHPS_Content_Collection;
+
+if ( $has_collection ) {
+	$tc_html  = (string) $collection->get_meta( 'html', '' );
+	$is_empty = (bool) $collection->get_meta( 'is_empty', true );
+} else {
+	$tc_html  = $data['html'] ?? '';
+	$is_empty = ! empty( $data['is_empty'] );
+}
 ?>
 <div class="dhps-service dhps-service--tc <?php echo esc_attr( $layout_class . $custom_class ); ?>">
 

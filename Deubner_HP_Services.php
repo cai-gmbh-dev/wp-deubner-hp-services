@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.17.3
+ * Version: 0.17.4
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -26,7 +26,7 @@
  * (siehe Discovery 26-EINHEITLICHES-DATENMODELL-PLAN-v0170 Sektion 8 TD-2).
  *
  * @package Deubner Homepage-Service
- * @version 0.17.3
+ * @version 0.17.4
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -45,7 +45,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.3' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.4' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -376,6 +376,12 @@ function dhps_init() {
     $mio_adapter = new DHPS_MIO_Adapter();
     DHPS_Content_Adapter_Registry::register( 'mio', $mio_adapter );
     DHPS_Content_Adapter_Registry::register( 'lxmio', $mio_adapter );
+
+    // 3a-7. TC-Adapter registrieren (v0.17.4 - LETZTER Hauptservice, 9/9 migriert).
+    //       Wrapper-Adapter: reicht Raw-HTML 1:1 + Empty-State-Flag durch.
+    //       echo $tc_html Trust-Decision (v0.13.0/v0.14.4) BLEIBT UNANGETASTET.
+    //       TC ist Singleton-Service (keine LXMIO-/MIL-/LP-aehnliche Variante).
+    DHPS_Content_Adapter_Registry::register( 'tc', new DHPS_TC_Adapter() );
 
     // 3b. Component-Registry: UI-Bausteine registrieren (v0.15.5).
     dhps_register_components();

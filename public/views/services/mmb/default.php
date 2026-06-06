@@ -30,8 +30,56 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$categories     = $data['categories'] ?? array();
-$search_config  = $data['search_config'] ?? array();
+// --- Daten-Pfad waehlen: Collection wenn verfuegbar, sonst Legacy. ---
+// v0.17.1: Wenn der Pipeline-Renderer eine $collection liefert (MMB-Adapter
+// aktiv), wird daraus die Legacy-Shape rekonstruiert (Pseudo-Rebuild). Damit
+// bleibt der Render-Code unter der Linie BYTEWISE identisch zum v0.17.0-Pfad
+// und das Lazy-Akkordeon-Markup unveraendert (Discovery v0.17.1 Sektion 4.2).
+$has_collection = isset( $collection ) && $collection instanceof DHPS_Content_Collection;
+
+if ( $has_collection ) {
+	$categories_order_raw = $collection->get_meta( 'categories_order', array() );
+	$categories_overview  = is_array( $categories_order_raw ) ? $categories_order_raw : array();
+	$categories_meta      = (array) $collection->get_meta( 'categories_meta', array() );
+}
+
+if ( $has_collection && ! empty( $categories_overview ) ) {
+	// v0.17.1-Pfad: $categories-Shape aus Collection rekonstruieren.
+	$items_by_category = array();
+	foreach ( $collection as $item ) {
+		/** @var DHPS_Content_Item $item */
+		$cat_id_item = $item->category ?? '';
+		if ( '' === $cat_id_item ) {
+			continue;
+		}
+		$items_by_category[ $cat_id_item ][] = array(
+			'id'          => isset( $item->meta['source_id'] ) ? (string) $item->meta['source_id'] : '',
+			'title'       => $item->title,
+			'description' => null !== $item->excerpt ? $item->excerpt : '',
+			'pdf_params'  => isset( $item->meta['pdf_params'] ) && is_array( $item->meta['pdf_params'] )
+				? $item->meta['pdf_params']
+				: array(),
+		);
+	}
+	$categories = array();
+	foreach ( $categories_overview as $cat_id_iter ) {
+		$cat_meta_iter = isset( $categories_meta[ $cat_id_iter ] ) && is_array( $categories_meta[ $cat_id_iter ] )
+			? $categories_meta[ $cat_id_iter ]
+			: array();
+		$categories[] = array(
+			'id'          => $cat_id_iter,
+			'name'        => isset( $cat_meta_iter['name'] ) ? (string) $cat_meta_iter['name'] : '',
+			'icon_slug'   => isset( $cat_meta_iter['icon_slug'] ) ? (string) $cat_meta_iter['icon_slug'] : '',
+			'fact_sheets' => isset( $items_by_category[ $cat_id_iter ] ) ? $items_by_category[ $cat_id_iter ] : array(),
+		);
+	}
+	$search_config = (array) $collection->get_meta( 'search_config', array() );
+} else {
+	// Legacy-Pfad: $categories + $search_config aus Pipeline-$data (wie vor v0.17.1).
+	$categories    = $data['categories'] ?? array();
+	$search_config = $data['search_config'] ?? array();
+}
+
 $service_tag    = $data['service_tag'] ?? 'mmb';
 $download_label = ( 'mil' === $service_tag ) ? 'Infografik herunterladen' : 'PDF herunterladen';
 $is_mil         = ( 'mil' === $service_tag );

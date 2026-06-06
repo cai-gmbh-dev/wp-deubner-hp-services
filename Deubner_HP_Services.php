@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.17.0
+ * Version: 0.17.1
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -26,7 +26,7 @@
  * (siehe Discovery 26-EINHEITLICHES-DATENMODELL-PLAN-v0170 Sektion 8 TD-2).
  *
  * @package Deubner Homepage-Service
- * @version 0.17.0
+ * @version 0.17.1
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -45,7 +45,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.0' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.1' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -112,6 +112,19 @@ spl_autoload_register( function ( $class_name ) {
 */
 
 require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-component-helpers.php';
+
+/*
+|--------------------------------------------------------------------------
+| Content-Datenmodell-Helpers (v0.17.1)
+|--------------------------------------------------------------------------
+|
+| Globale Helper-Funktionen rund um das einheitliche Datenmodell
+| (DHPS_Content_Collection / DHPS_Content_Adapter_Registry). Insbesondere
+| dhps_build_collection_for() fuer Sub-Shortcode-Pfade, die die Pipeline
+| umgehen aber trotzdem Adapter-Bridges nutzen sollen.
+| Datei ist keine Klasse, daher manueller Include analog v0.15.5-Pattern.
+*/
+require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-content-helpers.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -298,6 +311,14 @@ function dhps_init() {
     //     DHPS_Content_Collection. Pilot ist MAES; weitere Services folgen
     //     in v0.17.1+ (Roadmap siehe Discovery 26-EINHEITLICHES-DATENMODELL).
     DHPS_Content_Adapter_Registry::register( 'maes', new DHPS_MAES_Adapter() );
+
+    // 3a-2. MMB-Adapter (v0.17.1): wird sowohl fuer 'mmb' als auch 'mil'
+    //       registriert, weil MIL den MMB-Parser teilt und der Adapter
+    //       Service-agnostisch ist (Discovery v0.17.1 Sektion 5, Option B).
+    //       Item-IDs sind 'mmb-doc-...' bzw. 'mil-doc-...' (Service-Tag-aware).
+    $mmb_adapter = new DHPS_MMB_Adapter();
+    DHPS_Content_Adapter_Registry::register( 'mmb', $mmb_adapter );
+    DHPS_Content_Adapter_Registry::register( 'mil', $mmb_adapter );
 
     // 3b. Component-Registry: UI-Bausteine registrieren (v0.15.5).
     dhps_register_components();

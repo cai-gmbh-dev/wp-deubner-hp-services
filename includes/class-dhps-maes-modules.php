@@ -27,6 +27,30 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class DHPS_MAES_Modules {
 
+	/**
+	 * Atts-Whitelist, die einen Force-Legacy auf der Collection-Bridge
+	 * (v0.17.1) ausloest. Wenn einer dieser Atts in einem Sub-Shortcode
+	 * gesetzt ist, wird die Filter-Semantik nur auf $parsed_data (Legacy-
+	 * Array) angewendet - der Adapter kennt diese Filter NICHT und wuerde
+	 * sonst eine Collection liefern, die nicht zum gefilterten Legacy-
+	 * Datensatz passt (Sub-Shortcode-Template-Drift).
+	 *
+	 * Tech-Debt TD-V0171-1: Sub-Shortcode-Collection-Filter ist als
+	 * Folge-Release-Aufgabe (v0.17.2+) angedacht, sobald Item-Index-
+	 * Tracking via Item.meta.video_index in Adapter und Templates
+	 * konsistent vorliegt.
+	 *
+	 * Quellen-Recherche (Discovery 27 Sektion 6.3): heutige MAES-Sub-
+	 * Shortcode-Filter sind `einzelvideo` + `videoliste` ([maes_videos]).
+	 * `kategorie` und `rubrik` sind defensiv vorab eingetragen, falls
+	 * spaetere Modules-Erweiterungen sie nutzen - sie sind heute Inert
+	 * (keiner der 3 Sub-Shortcodes liest sie).
+	 *
+	 * @since 0.17.1
+	 * @var array<int,string>
+	 */
+	private const FORCE_LEGACY_ATTS = array( 'einzelvideo', 'videoliste', 'kategorie', 'rubrik' );
+
 	/** @var DHPS_API_Client */
 	private DHPS_API_Client $client;
 
@@ -85,6 +109,62 @@ class DHPS_MAES_Modules {
 		}
 
 		return $parsed;
+	}
+
+	/**
+	 * Liefert die MAES-Daten als {@see DHPS_Content_Collection} fuer den
+	 * Sub-Shortcode-Pfad (v0.17.1-Brueckenmethode).
+	 *
+	 * Diese Methode umgeht die Content-Pipeline (die fuer die Top-Level-
+	 * Shortcodes wie [maes] zustaendig ist) und nutzt stattdessen den
+	 * Helper {@see dhps_build_collection_for()}, um aus dem bereits
+	 * gecached'en Parser-Output direkt eine Collection zu erzeugen.
+	 *
+	 * Force-Legacy: Wenn der Aufrufer Filter-Atts uebergibt (z.B.
+	 * `einzelvideo` oder `videoliste`), wird `null` zurueckgegeben.
+	 * Begruendung: der Adapter weiss nichts von Sub-Shortcode-Filter-
+	 * Atts. Eine Collection wuerde alle Items enthalten, das Legacy-
+	 * Array hingegen den gefilterten Subset - Template-Drift. Sicherer
+	 * Default: Force-Legacy ueber {@see FORCE_LEGACY_ATTS}.
+	 *
+	 * @since 0.17.1
+	 *
+	 * @param string $section Logische Sektion ('videos'|'merkblaetter'|'aktuelles').
+	 *                        Aktuell nur fuer Debug-Logging und zukuenftige
+	 *                        Selektivitaet vorgesehen; der Adapter liefert
+	 *                        die volle Collection und Templates filtern per
+	 *                        $item->type.
+	 * @param array  $atts    Sub-Shortcode-Atts. Wenn FORCE_LEGACY_ATTS
+	 *                        gesetzt sind, returnt die Methode null
+	 *                        (Force-Legacy).
+	 *
+	 * @return DHPS_Content_Collection|null Collection wenn moeglich, null bei
+	 *                                       fehlender Daten / Force-Legacy /
+	 *                                       Adapter-Fehler.
+	 */
+	public function get_collection( string $section, array $atts = array() ): ?DHPS_Content_Collection {
+		unset( $section ); // aktuell nur dokumentarisch, koennte spaeter zur Selektion dienen.
+
+		// Force-Legacy bei Filter-Atts (Discovery 27 Sektion 6.3 Caveat 1).
+		foreach ( self::FORCE_LEGACY_ATTS as $force_att ) {
+			if ( ! isset( $atts[ $force_att ] ) ) {
+				continue;
+			}
+			$value = $atts[ $force_att ];
+			if ( is_string( $value ) && '' !== trim( $value ) && '0' !== trim( $value ) ) {
+				return null;
+			}
+			if ( is_int( $value ) && 0 !== $value ) {
+				return null;
+			}
+		}
+
+		$data = $this->get_data();
+		if ( null === $data ) {
+			return null;
+		}
+
+		return dhps_build_collection_for( 'maes', $data );
 	}
 
 	/**
@@ -155,6 +235,11 @@ class DHPS_MAES_Modules {
 
 		wp_enqueue_script( 'dhps-tp-js' );
 
+		// v0.17.1: Sub-Shortcodes-Bridge. Adapter-Aufruf via Helper, mit
+		// Force-Legacy bei Filter-Atts. $collection darf null sein - das
+		// Template hat seit v0.17.0 das $has_collection-Pattern.
+		$collection = $this->get_collection( 'videos', $atts );
+
 		ob_start();
 		include $template;
 		return ob_get_clean();
@@ -199,6 +284,11 @@ class DHPS_MAES_Modules {
 		// brauchen kein eigenes MMB-Akkordeon-JS mehr. Spart ~10 KB JS bei
 		// [maes_merkblaetter]-only-Seiten.
 
+		// v0.17.1: Sub-Shortcodes-Bridge. [maes_merkblaetter] hat heute keine
+		// Filter-Atts -> Force-Legacy greift nicht, Collection wird immer
+		// uebergeben (sofern Adapter registriert ist).
+		$collection = $this->get_collection( 'merkblaetter', $atts );
+
 		ob_start();
 		include $template;
 		return ob_get_clean();
@@ -239,6 +329,11 @@ class DHPS_MAES_Modules {
 		if ( ! file_exists( $template ) ) {
 			return '';
 		}
+
+		// v0.17.1: Sub-Shortcodes-Bridge. [maes_aktuelles] hat heute keine
+		// Filter-Atts -> Force-Legacy greift nicht, Collection wird immer
+		// uebergeben (sofern Adapter registriert ist).
+		$collection = $this->get_collection( 'aktuelles', $atts );
 
 		ob_start();
 		include $template;

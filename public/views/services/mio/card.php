@@ -22,10 +22,30 @@ if ( $grid_columns < 1 || $grid_columns > 4 ) { $grid_columns = 2; }
 $mio_style = sanitize_key( apply_filters( 'dhps_mio_style', 'default' ) );
 if ( ! in_array( $mio_style, array( 'default', 'minimal', 'shadow' ), true ) ) { $mio_style = 'default'; }
 
-$tax_dates     = $data['tax_dates'] ?? array();
-$search_config = $data['search_config'] ?? array();
-$ajax_params   = $data['ajax_params'] ?? array();
-$service_tag   = $data['service_tag'] ?? 'mio';
+// v0.17.3: Collection-Pfad wenn MIO-Adapter aktiv ist, sonst Legacy.
+// Pseudo-Rebuild rekonstruiert $tax_dates 1:1 in Parser-Order ueber den
+// Helper dhps_mio_item_to_legacy_month(). Search-Config + AJAX-Params
+// kommen aus Collection-Meta (PFLICHT, sonst News-Container bricht!).
+$has_collection = isset( $collection ) && $collection instanceof DHPS_Content_Collection;
+
+if ( $has_collection ) {
+	$tax_dates = array();
+	foreach ( $collection as $item ) {
+		/** @var DHPS_Content_Item $item */
+		$legacy_month = dhps_mio_item_to_legacy_month( $item );
+		if ( ! empty( $legacy_month ) ) {
+			$tax_dates[] = $legacy_month;
+		}
+	}
+	$search_config = (array) $collection->get_meta( 'search_config', array() );
+	$ajax_params   = (array) $collection->get_meta( 'ajax_params', array() );
+} else {
+	$tax_dates     = $data['tax_dates'] ?? array();
+	$search_config = $data['search_config'] ?? array();
+	$ajax_params   = $data['ajax_params'] ?? array();
+}
+
+$service_tag = $data['service_tag'] ?? 'mio';
 
 wp_enqueue_script( 'dhps-mio-js' );
 ?>

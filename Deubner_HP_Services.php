@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.17.2
+ * Version: 0.17.3
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -26,7 +26,7 @@
  * (siehe Discovery 26-EINHEITLICHES-DATENMODELL-PLAN-v0170 Sektion 8 TD-2).
  *
  * @package Deubner Homepage-Service
- * @version 0.17.2
+ * @version 0.17.3
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -45,7 +45,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.2' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.3' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -135,6 +135,16 @@ require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-content-helpers.php';
 | nutzen den Helper im Pseudo-Rebuild-Pfad).
 */
 require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-tp-content-helpers.php';
+
+/*
+|--------------------------------------------------------------------------
+| MIO-Content-Helpers (v0.17.3)
+|--------------------------------------------------------------------------
+|
+| Geteilter Item-zu-Legacy-Monatsspalten-Helper fuer MIO/LXMIO-Templates
+| (3 Templates nutzen den Helper im Pseudo-Rebuild-Pfad).
+*/
+require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-mio-content-helpers.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -353,6 +363,19 @@ function dhps_init() {
     //       VOR dem Adapter, sodass DHPS_TPT_Modules das 'tpt_config'-Array
     //       (Admin-Texte) bereits angereichert hat, wenn der Adapter laeuft.
     DHPS_Content_Adapter_Registry::register( 'tpt', new DHPS_TPT_Adapter() );
+
+    // 3a-5. MIO-Adapter (v0.17.3): wird sowohl fuer 'mio' als auch 'lxmio'
+    //       registriert, weil LXMIO den MIO-Parser teilt und keine eigenen
+    //       Templates hat (Fallback dhps_template_fallbacks: lxmio -> mio).
+    //       Der Adapter ist Service-agnostisch (Discovery v0.17.3 Sektion 3,
+    //       Option B aus MMB/MIL+TP/LP-Pattern). Item-IDs sind
+    //       'mio-taxdate-{idx}' bzw. 'lxmio-taxdate-{idx}'. Sondertyp 'tax_date'
+    //       (in ALLOWED_TYPES seit v0.17.0 vorbehalten - loest sich hier ein).
+    //       Der Sub-Shortcode [mio_termine] umgeht den Adapter bewusst
+    //       (Tech-Debt TD-V0173-1 fuer v0.17.x-Abschluss).
+    $mio_adapter = new DHPS_MIO_Adapter();
+    DHPS_Content_Adapter_Registry::register( 'mio', $mio_adapter );
+    DHPS_Content_Adapter_Registry::register( 'lxmio', $mio_adapter );
 
     // 3b. Component-Registry: UI-Bausteine registrieren (v0.15.5).
     dhps_register_components();

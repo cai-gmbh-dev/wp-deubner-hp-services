@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.17.4
+ * Version: 0.17.5
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -26,7 +26,7 @@
  * (siehe Discovery 26-EINHEITLICHES-DATENMODELL-PLAN-v0170 Sektion 8 TD-2).
  *
  * @package Deubner Homepage-Service
- * @version 0.17.4
+ * @version 0.17.5
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -45,7 +45,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.4' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.17.5' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );

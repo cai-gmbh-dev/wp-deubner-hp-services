@@ -14,6 +14,21 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Pseudo-Rebuild aus Collection (v0.17.5 TD-V0173-1, siehe default.php Header).
+$has_collection = isset( $collection ) && $collection instanceof DHPS_Content_Collection;
+if ( $has_collection && function_exists( 'dhps_mio_item_to_legacy_month' ) ) {
+    $rebuilt = array();
+    foreach ( $collection as $item ) {
+        $legacy_month = dhps_mio_item_to_legacy_month( $item );
+        if ( ! empty( $legacy_month ) ) {
+            $rebuilt[] = $legacy_month;
+        }
+    }
+    if ( ! empty( $rebuilt ) ) {
+        $data = $rebuilt;
+    }
+}
+
 $grid_modifier = ( 1 === count( $data ) ) ? ' dhps-termine__grid--single' : '';
 ?>
 <div class="dhps-termine dhps-termine--card<?php echo esc_attr( $custom_class ); ?>">

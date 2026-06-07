@@ -252,6 +252,26 @@ class DHPS_AJAX_Proxy {
 		$parser = new DHPS_MMB_Search_Parser();
 		$parsed = $parser->parse( $response->get_body() );
 
+		// v0.17.5 TD-V0171-3: Collection-Side-Channel fuer DTO-Konsistenz.
+		// Frontend-JS-Vertrag bleibt BYTEWISE UNVERAENDERT: $parsed ist die
+		// JSON-Response. Plugins/Themes koennen die Collection via Action-
+		// Hook konsumieren (z.B. um eigene Search-Result-Templates zu rendern).
+		if ( function_exists( 'dhps_mmb_search_to_collection' ) ) {
+			$search_collection = dhps_mmb_search_to_collection( $parsed, $service_tag );
+
+			/**
+			 * Action: erlaubt Plugins/Themes die Search-Results als Collection
+			 * zu konsumieren. Default-Verhalten unveraendert.
+			 *
+			 * @since 0.17.5
+			 *
+			 * @param DHPS_Content_Collection|null $search_collection Collection oder null.
+			 * @param array                        $parsed            Roher Parser-Output.
+			 * @param string                       $service_tag       'mmb' oder 'mil'.
+			 */
+			do_action( 'dhps_mmb_search_collection', $search_collection, $parsed, $service_tag );
+		}
+
 		// Cachen (5 Minuten fuer Suchergebnisse).
 		if ( ! empty( $parsed['results'] ) ) {
 			$this->cache->set_data( $cache_key, $parsed, 300 );

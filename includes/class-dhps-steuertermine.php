@@ -24,6 +24,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DHPS_Steuertermine {
 
     /**
+     * Filter-Atts die den Adapter-Pfad umgehen und Force-Legacy triggern.
+     *
+     * Bei Sub-Shortcode-Aufruf mit aktivem `month=current|next` oder `count>0`
+     * wird der Item-Set vor dem Template gefiltert. Der Adapter sieht das
+     * gefilterte Array, aber die Collection-Items-Reihenfolge spiegelt nicht
+     * die Filter-Semantik. Daher: Force-Legacy schuetzt vor Drift.
+     *
+     * Analog `DHPS_MAES_Modules::FORCE_LEGACY_ATTS` (v0.17.1).
+     *
+     * @since 0.17.5
+     */
+    private const FORCE_LEGACY_ATTS = array( 'month', 'count' );
+
+    /**
      * API-Client fuer Service-Anfragen.
      *
      * @var DHPS_API_Client
@@ -125,11 +139,56 @@ class DHPS_Steuertermine {
             unset( $month );
         }
 
+        // Collection-Build (v0.17.5 TD-V0173-1): nur wenn keine Filter-Atts
+        // aktiv sind. Force-Legacy bei month!=all oder count>0 schuetzt vor
+        // Drift zwischen gefilterter Item-Liste und Collection-Items.
+        $collection = $this->get_collection( $atts, $parsed );
+
         // Template rendern.
         $layout    = sanitize_key( $atts['layout'] );
         $css_class = sanitize_html_class( $atts['class'] );
 
-        return $this->render_template( $tax_dates, $layout, $css_class );
+        return $this->render_template( $tax_dates, $layout, $css_class, $collection );
+    }
+
+    /**
+     * Liefert eine DHPS_Content_Collection fuer den Sub-Shortcode-Aufruf,
+     * sofern keine Filter-Atts aktiv sind. Sonst null (Force-Legacy).
+     *
+     * Force-Legacy-Logik analog `DHPS_MAES_Modules::get_collection` aus v0.17.1:
+     *
+     * - `month` != 'all' (z.B. 'current'/'next') -> null
+     * - `count` > 0 -> null
+     * - Sonst: Helper `dhps_build_collection_for('mio', $parsed_data)`
+     *
+     * @since 0.17.5
+     *
+     * @param array $atts        Bereits per `shortcode_atts` aufgeloeste Atts.
+     * @param array $parsed_data Geparste MIO-Daten (mit `tax_dates`-Schluessel).
+     *
+     * @return DHPS_Content_Collection|null Collection wenn Adapter da + keine Filter-Atts.
+     */
+    private function get_collection( array $atts, array $parsed_data ): ?DHPS_Content_Collection {
+        foreach ( self::FORCE_LEGACY_ATTS as $att_name ) {
+            if ( ! isset( $atts[ $att_name ] ) ) {
+                continue;
+            }
+            $raw = trim( (string) $atts[ $att_name ] );
+            // Default-Werte gelten als "nicht gesetzt":
+            // month-Default 'all', count-Default '0' bzw. ''.
+            if ( 'month' === $att_name && ( '' === $raw || 'all' === $raw ) ) {
+                continue;
+            }
+            if ( 'count' === $att_name && ( '' === $raw || '0' === $raw ) ) {
+                continue;
+            }
+            return null;
+        }
+
+        if ( ! function_exists( 'dhps_build_collection_for' ) ) {
+            return null;
+        }
+        return dhps_build_collection_for( 'mio', $parsed_data );
     }
 
     /**
@@ -139,12 +198,16 @@ class DHPS_Steuertermine {
      *
      * @since 0.9.8
      *
-     * @param array  $tax_dates  Array der Monats-Daten mit Eintraegen.
-     * @param string $layout     Layout-Variante (default|card|inline|compact).
-     * @param string $css_class  Zusaetzliche CSS-Klasse.
+     * @since 0.17.5 Optionaler Parameter `$collection` fuer Adapter-Bridge.
+     *
+     * @param array                         $tax_dates  Array der Monats-Daten mit Eintraegen.
+     * @param string                        $layout     Layout-Variante (default|card|inline|compact).
+     * @param string                        $css_class  Zusaetzliche CSS-Klasse.
+     * @param DHPS_Content_Collection|null  $collection Adapter-Collection (null = Force-Legacy).
+     *
      * @return string HTML-Ausgabe.
      */
-    private function render_template( array $tax_dates, string $layout, string $css_class ): string {
+    private function render_template( array $tax_dates, string $layout, string $css_class, ?DHPS_Content_Collection $collection = null ): string {
         $safe_layout = sanitize_file_name( $layout );
 
         // Theme-Override pruefen.
@@ -161,6 +224,7 @@ class DHPS_Steuertermine {
 
         $data         = $tax_dates;
         $custom_class = ! empty( $css_class ) ? ' ' . $css_class : '';
+        // $collection wird in den Template-Scope mit gereicht (kann null sein).
 
         ob_start();
         include $template;

@@ -80,3 +80,123 @@ if ( ! function_exists( 'dhps_build_collection_for' ) ) {
 		}
 	}
 }
+
+if ( ! function_exists( 'dhps_mmb_search_to_collection' ) ) {
+
+	/**
+	 * Wandelt das Ergebnis-Array von DHPS_MMB_Search_Parser in eine
+	 * DHPS_Content_Collection (Side-Channel fuer DTO-Konsistenz).
+	 *
+	 * MMB-Search-AJAX laeuft NICHT durch die Content-Pipeline und kann
+	 * daher den `DHPS_MMB_Adapter` nicht ueber `Registry::for_service` nutzen.
+	 * Dieser Helper bietet eine **Helper-only Bridge** (Option D aus
+	 * Discovery v0.17.5 Sektion 4.2): die JSON-Response-Shape an Frontend-JS
+	 * bleibt BYTEWISE UNVERAENDERT - die Collection ist nur ueber den
+	 * `dhps_mmb_search_collection`-Action-Hook fuer Plugins/Themes zugaenglich.
+	 *
+	 * Search-Parser liefert:
+	 *   {
+	 *     'results'     => [ { id, title, description, pdf_params }, ... ],
+	 *     'total_count' => int,
+	 *     'query'       => string,
+	 *   }
+	 *
+	 * Helper mappet:
+	 * - Items: type='document', service='mmb' (oder 'mil'), Item-ID
+	 *   `{service}-search-doc-{idx-or-result-id}`
+	 * - Item-meta: pdf_params, source_id, result_index
+	 * - Collection-Meta: total_count, query, is_search=true
+	 *
+	 * Fail-Soft: bei Adapter-Exception oder fehlender Registry liefert
+	 * der Helper null. Defensiv: bei fehlenden Schluesseln werden leere
+	 * Defaults gesetzt, kein Throw.
+	 *
+	 * @since 0.17.5 TD-V0171-3
+	 *
+	 * @param array  $parsed_search Parser-Output (results/total_count/query).
+	 * @param string $service       Service-Tag ('mmb' oder 'mil').
+	 *
+	 * @return DHPS_Content_Collection|null Collection oder null bei Adapter-Drift.
+	 */
+	function dhps_mmb_search_to_collection( array $parsed_search, string $service ): ?DHPS_Content_Collection {
+		if ( ! class_exists( 'DHPS_Content_Collection' )
+			|| ! class_exists( 'DHPS_Content_Item' ) ) {
+			return null;
+		}
+
+		$results     = isset( $parsed_search['results'] ) && is_array( $parsed_search['results'] )
+			? $parsed_search['results']
+			: array();
+		$total_count = isset( $parsed_search['total_count'] ) ? (int) $parsed_search['total_count'] : count( $results );
+		$query       = isset( $parsed_search['query'] ) ? (string) $parsed_search['query'] : '';
+
+		$items = array();
+		foreach ( $results as $idx => $result ) {
+			if ( ! is_array( $result ) ) {
+				continue;
+			}
+			$title = isset( $result['title'] ) ? trim( (string) $result['title'] ) : '';
+			if ( '' === $title ) {
+				continue;
+			}
+
+			$source_id = isset( $result['id'] ) ? (string) $result['id'] : '';
+			$item_id   = $service . '-search-doc-' . ( '' !== $source_id ? $source_id : (string) $idx );
+			$excerpt   = isset( $result['description'] ) ? (string) $result['description'] : null;
+
+			$meta = array(
+				'result_index' => (int) $idx,
+			);
+			if ( '' !== $source_id ) {
+				$meta['source_id'] = $source_id;
+			}
+			if ( isset( $result['pdf_params'] ) && is_array( $result['pdf_params'] ) ) {
+				$meta['pdf_params'] = $result['pdf_params'];
+			}
+
+			try {
+				$items[] = new DHPS_Content_Item(
+					$item_id,
+					$service,
+					$title,
+					'document',
+					'',         // body
+					$excerpt,
+					null,       // image
+					null,       // media
+					null,       // link
+					null,       // date
+					array(),    // tags
+					null,       // category
+					$meta
+				);
+			} catch ( \Throwable $e ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- diagnostisch.
+					error_log( sprintf(
+						'DHPS mmb_search_to_collection skip item idx=%d: %s',
+						$idx,
+						$e->getMessage()
+					) );
+				}
+				continue;
+			}
+		}
+
+		$collection_meta = array(
+			'total_count' => $total_count,
+			'query'       => $query,
+			'is_search'   => true,
+		);
+
+		try {
+			return new DHPS_Content_Collection( $service, $items, $collection_meta );
+		} catch ( \Throwable $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- diagnostisch.
+				error_log( sprintf( 'DHPS mmb_search_to_collection failed: %s', $e->getMessage() ) );
+			}
+			return null;
+		}
+	}
+}

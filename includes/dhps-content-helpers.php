@@ -334,13 +334,18 @@ if ( ! function_exists( 'dhps_mmb_category_to_collection' ) ) {
 	 * - Collection-Meta: category_id, category_name, icon_slug, item_count, is_lazy_category=true
 	 *
 	 * @since 0.18.2 TD-V0171-2
+	 * @since 0.18.3 Optionaler `$extra_meta`-Param fuer Aufruf-Kontext
+	 *               (z.B. `['layout' => 'card']`). Wird in Collection-Meta
+	 *               gemerged; Helper-Defaults gewinnen bei Key-Kollision.
 	 *
-	 * @param array  $category Category-Array (id/name/icon_slug/fact_sheets).
-	 * @param string $service  Service-Tag ('mmb' oder 'mil').
+	 * @param array  $category   Category-Array (id/name/icon_slug/fact_sheets).
+	 * @param string $service    Service-Tag ('mmb' oder 'mil').
+	 * @param array  $extra_meta Optionaler Aufruf-Kontext (Layout-Hint etc.).
+	 *                           Wird in Collection-Meta gemerged.
 	 *
 	 * @return DHPS_Content_Collection|null Collection oder null bei Konstruktor-Drift.
 	 */
-	function dhps_mmb_category_to_collection( array $category, string $service ): ?DHPS_Content_Collection {
+	function dhps_mmb_category_to_collection( array $category, string $service, array $extra_meta = array() ): ?DHPS_Content_Collection {
 		if ( ! class_exists( 'DHPS_Content_Collection' )
 			|| ! class_exists( 'DHPS_Content_Item' ) ) {
 			return null;
@@ -409,12 +414,20 @@ if ( ! function_exists( 'dhps_mmb_category_to_collection' ) ) {
 			}
 		}
 
-		$collection_meta = array(
-			'category_id'       => $category_id,
-			'category_name'     => $category_name,
-			'icon_slug'         => $icon_slug,
-			'item_count'        => count( $items ),
-			'is_lazy_category'  => true,
+		// v0.18.3: $extra_meta-Merge fuer Aufruf-Kontext (Discovery 36
+		// Sektion 1, Option B.1). Merge-Order: Aufrufer-Werte zuerst, dann
+		// Helper-Defaults - so gewinnen Helper-Defaults bei Key-Kollision
+		// und Side-Channel-Invarianten (`is_lazy_category` etc.) bleiben
+		// erhalten.
+		$collection_meta = array_merge(
+			$extra_meta,
+			array(
+				'category_id'       => $category_id,
+				'category_name'     => $category_name,
+				'icon_slug'         => $icon_slug,
+				'item_count'        => count( $items ),
+				'is_lazy_category'  => true,
+			)
 		);
 
 		try {
@@ -465,13 +478,17 @@ if ( ! function_exists( 'dhps_mio_news_to_collection' ) ) {
 	 * - Collection-Meta: groups_order, pagination (mit Defaults), is_news=true
 	 *
 	 * @since 0.18.2 TD-V0174-1
+	 * @since 0.18.3 Optionaler `$extra_meta`-Param fuer Aufruf-Kontext
+	 *               (z.B. Filter-Atts). Wird in Collection-Meta gemerged;
+	 *               Helper-Defaults gewinnen bei Key-Kollision.
 	 *
 	 * @param array  $parsed_news Parser-Output (groups + pagination).
 	 * @param string $service     Service-Tag ('mio' oder 'lxmio').
+	 * @param array  $extra_meta  Optionaler Aufruf-Kontext (Filter-Atts etc.).
 	 *
 	 * @return DHPS_Content_Collection|null Collection oder null bei Drift.
 	 */
-	function dhps_mio_news_to_collection( array $parsed_news, string $service ): ?DHPS_Content_Collection {
+	function dhps_mio_news_to_collection( array $parsed_news, string $service, array $extra_meta = array() ): ?DHPS_Content_Collection {
 		if ( ! class_exists( 'DHPS_Content_Collection' )
 			|| ! class_exists( 'DHPS_Content_Item' ) ) {
 			return null;
@@ -567,10 +584,14 @@ if ( ! function_exists( 'dhps_mio_news_to_collection' ) ) {
 			}
 		}
 
-		$collection_meta = array(
-			'groups_order' => $groups_order,
-			'pagination'   => $pagination,
-			'is_news'      => true,
+		// v0.18.3: $extra_meta-Merge (siehe MMB-Category-Helper Header).
+		$collection_meta = array_merge(
+			$extra_meta,
+			array(
+				'groups_order' => $groups_order,
+				'pagination'   => $pagination,
+				'is_news'      => true,
+			)
 		);
 
 		try {

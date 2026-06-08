@@ -180,7 +180,18 @@ class DHPS_AJAX_Proxy {
 		// News-Renders, Analytics). Erste Produktivnutzung des `'news'`-
 		// Item-Types (in ALLOWED_TYPES seit v0.17.0 vorbehalten).
 		if ( function_exists( 'dhps_mio_news_to_collection' ) ) {
-			$news_collection = dhps_mio_news_to_collection( $parsed, 'mio' );
+			// v0.18.3: Filter-Atts als $extra_meta durchreichen (Aufruf-
+			// Kontext fuer Action-Hook-Konsumenten).
+			$news_collection = dhps_mio_news_to_collection(
+				$parsed,
+				'mio',
+				array(
+					'fachgebiet'  => $fachgebiet,
+					'variante'    => $variante,
+					'anzahl'      => $anzahl,
+					'teasermodus' => $teasermodus,
+				)
+			);
 
 			/**
 			 * Action: erlaubt Plugins/Themes die News-Daten als Collection zu

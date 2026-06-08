@@ -119,14 +119,81 @@ do_action( 'dhps_mmb_search_collection', $search_collection, $parsed, $service_t
 **Frontend-JS-Vertrag bleibt unveraendert** - die JSON-Response ist bytewise
 identisch zu pre-Bridge-Version.
 
-## Inventar der Helper-Pattern (Stand v0.17.5)
+## Inventar der Helper-Pattern (Stand v0.18.3)
 
-| Helper | Pfad | Verwendung |
-|--------|------|------------|
-| `dhps_build_collection_for($service, $parsed_data)` | Sub-Shortcode-Bridges | MAES + Steuertermine |
-| `dhps_mmb_search_to_collection($parsed, $service)` | AJAX-Search-Side-Channel | MMB-Search-AJAX |
-| `dhps_tp_item_to_legacy_video($item)` | Template-Rebuild | TP/TPT/LP Templates |
-| `dhps_mio_item_to_legacy_month($item)` | Template-Rebuild | MIO/Steuertermine Templates |
+| Helper | Pfad | Verwendung | Seit |
+|--------|------|------------|------|
+| `dhps_build_collection_for($service, $parsed)` | Sub-Shortcode-Bridges | MAES + Steuertermine | v0.17.1 |
+| `dhps_collection_or_empty($col, $service)` | Pipeline-Garantie 3.B | alle Templates | v0.18.0 |
+| `dhps_mmb_search_to_collection($parsed, $service)` | AJAX-Search-Side-Channel | MMB-Search-AJAX | v0.17.5 |
+| `dhps_mmb_category_to_collection($cat, $service, $extra_meta=[])` | AJAX-Lazy-Akkordeon-Side-Channel | MMB-Category-AJAX | v0.18.2 / v0.18.3 |
+| `dhps_mio_news_to_collection($parsed, $service, $extra_meta=[])` | AJAX-News-Side-Channel | MIO-News-AJAX | v0.18.2 / v0.18.3 |
+| `dhps_mmb_collection_to_legacy_categories($col)` | Template-Rebuild | 3 MMB-Templates | v0.18.0 |
+| `dhps_tp_collection_to_legacy_categories($col)` | Template-Rebuild | TP-Templates | v0.18.0 |
+| `dhps_tp_item_to_legacy_video($item)` | Template-Rebuild | TP/TPT/LP-Templates | v0.17.2 |
+| `dhps_mio_item_to_legacy_month($item)` | Template-Rebuild | MIO/Steuertermine-Templates | v0.17.3 |
+| `dhps_partial_date_to_iso($input, $format)` | Adapter-Beimaterial | TP/TPT/MIO-Adapter | v0.18.1 |
+
+**10 Helper-Funktionen** in 4 Helper-Files: `dhps-content-helpers.php`,
+`dhps-tp-content-helpers.php`, `dhps-mio-content-helpers.php`,
+`dhps-date-helpers.php`.
+
+## Action-Hook-Side-Channels (Stand v0.18.3)
+
+| Hook | Seit | Trigger | Parameter |
+|------|------|---------|-----------|
+| `dhps_mmb_search_collection` | v0.17.5 | MMB/MIL-Search-AJAX | $col, $parsed, $service_tag |
+| `dhps_mmb_category_collection` | v0.18.2 | MMB/MIL-Lazy-Akkordeon-AJAX | $col, $category, $service |
+| `dhps_news_collection` | v0.18.2 | MIO-News-Container-AJAX | $col, $parsed, 'mio' |
+
+Alle drei sind **`do_action`** (NICHT `apply_filters`) - Subscriber sehen die
+Collection, koennen aber die AJAX-JSON-Response NICHT veraendern.
+
+## Konvention: $extra_meta-Param (seit v0.18.3)
+
+Side-Channel-Helper, deren AJAX-Handler **Aufruf-Kontext** besitzen
+(z.B. Layout-Hint, Filter-Atts), exponieren einen optionalen 3. Param
+`array $extra_meta = array()`. Der Helper merged ihn in die Collection-Meta:
+
+```php
+$collection_meta = array_merge(
+    $extra_meta,            // 1) Aufrufer-Kontext zuerst
+    array(                  // 2) Helper-Defaults dominieren
+        'is_lazy_category' => true,
+        // ...
+    )
+);
+```
+
+**Merge-Order-Konvention**: bei Key-Kollision **gewinnen Helper-Defaults**.
+Damit bleiben Side-Channel-Invarianten (`is_lazy_category`, `is_news` etc.)
+erhalten, auch wenn ein Aufrufer sie versehentlich ueberschreibt.
+
+**Wann anbieten**: wenn der AJAX-Handler Request-Kontext besitzt, den der
+Parser/Helper nicht aus den Daten herleiten kann (Layout, Filter-Atts).
+
+**Wann NICHT anbieten**: bei reinen Lookup-Helpern, die schon alle relevanten
+Felder aus dem Parser-Output lesen (`dhps_mmb_search_to_collection` -
+Search-Query ist bereits in `query`-Meta).
+
+## Konvention: Item-Meta-Indices
+
+Side-Channel-Helper nutzen **kontext-spezifische Index-Namen** statt einer
+einheitlichen Konvention:
+
+| Helper | Index-Schluessel | Semantik |
+|--------|------------------|----------|
+| `dhps_mmb_search_to_collection` | `result_index` | Index in der Search-Result-Liste |
+| `dhps_mmb_category_to_collection` | `sheet_index` | Index im `fact_sheets`-Array dieser Kategorie |
+| `dhps_mio_news_to_collection` | `group_index` (+ `article_index` intern) | Index der Gruppe (+ Position innerhalb) |
+
+**Begruendung**: semantische Klarheit > Cross-Helper-Konsistenz. Indices
+sind **Side-Channel-intern** (nicht in JSON-Response, kein Frontend-JS-
+Konsument), daher kein BC-Risiko durch unterschiedliche Namen.
+
+**Bei neuen Helpern**: kontext-spezifischen Namen waehlen, der den
+Container-Typ widerspiegelt (`row_index` fuer Tabellen, `entry_index` fuer
+Listen, etc.).
 
 ## Anti-Pattern
 

@@ -314,7 +314,12 @@ class DHPS_MMB_AJAX_Handler {
 		// JSON-Response. Plugins/Themes koennen die Collection via Action-Hook
 		// konsumieren (z.B. fuer eigene Akkordeon-Renders, Analytics).
 		if ( function_exists( 'dhps_mmb_category_to_collection' ) ) {
-			$category_collection = dhps_mmb_category_to_collection( $category, $service );
+			// v0.18.3: Aufruf-Kontext (Layout-Hint) als $extra_meta durchreichen.
+			$category_collection = dhps_mmb_category_to_collection(
+				$category,
+				$service,
+				array( 'layout' => $layout )
+			);
 
 			/**
 			 * Action: erlaubt Plugins/Themes die Lazy-Akkordeon-Category-Daten

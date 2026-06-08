@@ -24,11 +24,11 @@ foreach ( $collection as $item ) {
     }
 }
 if ( ! empty( $rebuilt ) ) {
-    $data = $rebuilt;
+    $months = $rebuilt;
 }
 ?>
 <span class="dhps-termine dhps-termine--inline<?php echo esc_attr( $custom_class ); ?>">
-    <?php foreach ( $data as $m_index => $month ) : ?>
+    <?php foreach ( $months as $m_index => $month ) : ?>
         <?php if ( $m_index > 0 ) : ?>
             <span class="dhps-termine__separator">&middot;</span>
         <?php endif; ?>

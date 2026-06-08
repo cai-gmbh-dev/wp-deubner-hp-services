@@ -24,14 +24,14 @@ foreach ( $collection as $item ) {
     }
 }
 if ( ! empty( $rebuilt ) ) {
-    $data = $rebuilt;
+    $months = $rebuilt;
 }
 
-$grid_modifier = ( 1 === count( $data ) ) ? ' dhps-termine__grid--single' : '';
+$grid_modifier = ( 1 === count( $months ) ) ? ' dhps-termine__grid--single' : '';
 ?>
 <div class="dhps-termine dhps-termine--card<?php echo esc_attr( $custom_class ); ?>">
     <div class="dhps-termine__grid<?php echo esc_attr( $grid_modifier ); ?>">
-        <?php foreach ( $data as $month ) : ?>
+        <?php foreach ( $months as $month ) : ?>
             <div class="dhps-termine__month">
                 <?php if ( ! empty( $month['title'] ) ) : ?>
                     <h4 class="dhps-termine__title"><?php echo esc_html( $month['title'] ); ?></h4>

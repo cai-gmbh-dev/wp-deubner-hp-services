@@ -194,6 +194,89 @@ final class DHPS_Content_Collection implements IteratorAggregate, Countable {
 	}
 
 	/**
+	 * Sortiert die Collection nach einem Sortier-Schluessel.
+	 *
+	 * Liefert eine NEUE Collection (Immutable-Pattern wie filter/group_by).
+	 * Items ohne sortierbaren Wert landen am Ende, unabhaengig von der
+	 * Sortier-Richtung (semantisch konsistent: "unbekannte Daten = am Ende").
+	 *
+	 * - `$key_or_callable` als string: Meta-Schluessel, z.B. `'date_iso'`
+	 *   -> Vergleich erfolgt auf `$item->meta[$key]` (String-Compare).
+	 * - `$key_or_callable` als callable: Funktion (DHPS_Content_Item):mixed
+	 *   -> Custom-Compare-Wert (string|int|float|null).
+	 *
+	 * **Sort-Stabilitaet**: PHP 8.0+ `usort` ist stable, daher behalten
+	 * Items mit identischem Sort-Wert ihre Original-Reihenfolge.
+	 *
+	 * @since 0.19.1
+	 *
+	 * @param callable|string $key_or_callable Meta-Schluessel oder Compare-Callable.
+	 * @param string          $direction       'asc' | 'desc'.
+	 *
+	 * @return self Neue Collection in sortierter Reihenfolge.
+	 *
+	 * @throws InvalidArgumentException Wenn $direction nicht 'asc'/'desc' ist.
+	 */
+	public function sorted_by( $key_or_callable, string $direction = 'asc' ): self {
+		if ( 'asc' !== $direction && 'desc' !== $direction ) {
+			throw new InvalidArgumentException( sprintf(
+				'DHPS_Content_Collection::sorted_by(): direction muss "asc" oder "desc" sein, "%s" gegeben.',
+				$direction
+			) );
+		}
+
+		// Sort-Value-Extraktor je nach Param-Typ.
+		if ( is_callable( $key_or_callable ) ) {
+			$extract = $key_or_callable;
+		} else {
+			$meta_key = (string) $key_or_callable;
+			$extract  = static function ( DHPS_Content_Item $item ) use ( $meta_key ) {
+				return $item->meta[ $meta_key ] ?? null;
+			};
+		}
+
+		$sorted = $this->items;
+		usort( $sorted, static function ( DHPS_Content_Item $a, DHPS_Content_Item $b ) use ( $extract, $direction ) {
+			$va = $extract( $a );
+			$vb = $extract( $b );
+
+			// null-Items landen IMMER am Ende, unabhaengig von direction.
+			$a_null = ( null === $va || '' === $va );
+			$b_null = ( null === $vb || '' === $vb );
+			if ( $a_null && $b_null ) {
+				return 0;
+			}
+			if ( $a_null ) {
+				return 1;
+			}
+			if ( $b_null ) {
+				return -1;
+			}
+
+			$cmp = $va <=> $vb;
+			return 'desc' === $direction ? -$cmp : $cmp;
+		} );
+
+		return new self( $this->service, $sorted, $this->meta );
+	}
+
+	/**
+	 * Convenience-Wrapper: sortiert nach `meta.date_iso` (YYYY-MM-Format
+	 * aus v0.18.1-Beimaterial-Pattern).
+	 *
+	 * Items ohne `meta.date_iso` landen am Ende (siehe sorted_by).
+	 *
+	 * @since 0.19.1
+	 *
+	 * @param string $direction 'asc' (Standard) | 'desc'.
+	 *
+	 * @return self Neue Collection nach Datum sortiert.
+	 */
+	public function sort_by_date_iso( string $direction = 'asc' ): self {
+		return $this->sorted_by( 'date_iso', $direction );
+	}
+
+	/**
 	 * Gruppiert die Collection nach einem Item-Feld.
 	 *
 	 * Erlaubte Keys: 'category', 'type', 'service' (Trust-Decision TD-12).

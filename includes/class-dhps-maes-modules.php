@@ -243,13 +243,9 @@ class DHPS_MAES_Modules {
 		$filtered_data['videos'] = $videos;
 		$collection = dhps_build_collection_for( 'maes', $filtered_data );
 
-		// v0.19.0 MAJOR: $service_tag direkt im Template-Scope + $data wird
-		// Deprecated-Data-Proxy. Theme-Overrides bekommen WP_DEBUG-Notice
-		// wenn sie $data['...'] lesen.
+		// v0.19.1: $service_tag direkt im Template-Scope, $data komplett raus.
 		$service_tag = 'maes';
-		if ( class_exists( 'DHPS_Deprecated_Data_Proxy' ) ) {
-			$data = new DHPS_Deprecated_Data_Proxy( $filtered_data, 'maes', $layout );
-		}
+		unset( $data );
 
 		ob_start();
 		include $template;
@@ -301,11 +297,9 @@ class DHPS_MAES_Modules {
 		$filtered_data['merkblaetter'] = $merkblaetter;
 		$collection = dhps_build_collection_for( 'maes', $filtered_data );
 
-		// v0.19.0 MAJOR: $service_tag + Deprecated-Data-Proxy (siehe render_videos).
+		// v0.19.1: $service_tag direkt im Template-Scope, $data komplett raus.
 		$service_tag = 'maes';
-		if ( class_exists( 'DHPS_Deprecated_Data_Proxy' ) ) {
-			$data = new DHPS_Deprecated_Data_Proxy( $filtered_data, 'maes', $layout );
-		}
+		unset( $data );
 
 		ob_start();
 		include $template;
@@ -354,11 +348,9 @@ class DHPS_MAES_Modules {
 		$filtered_data['news'] = $news;
 		$collection = dhps_build_collection_for( 'maes', $filtered_data );
 
-		// v0.19.0 MAJOR: $service_tag + Deprecated-Data-Proxy.
+		// v0.19.1: $service_tag direkt im Template-Scope, $data komplett raus.
 		$service_tag = 'maes';
-		if ( class_exists( 'DHPS_Deprecated_Data_Proxy' ) ) {
-			$data = new DHPS_Deprecated_Data_Proxy( $filtered_data, 'maes', $layout );
-		}
+		unset( $data );
 
 		ob_start();
 		include $template;

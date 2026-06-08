@@ -30,7 +30,6 @@ foreach ( $collection as $item ) {
 $search_config = (array) $collection->get_meta( 'search_config', array() );
 $ajax_params   = (array) $collection->get_meta( 'ajax_params', array() );
 
-$service_tag = $data['service_tag'] ?? 'mio';
 
 wp_enqueue_script( 'dhps-mio-js' );
 ?>

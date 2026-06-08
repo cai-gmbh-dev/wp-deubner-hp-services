@@ -43,7 +43,6 @@ $rebuilt    = dhps_tp_collection_to_legacy_categories( $collection );
 $featured   = $rebuilt['featured'];
 $categories = $rebuilt['categories'];
 
-$service_tag = $data['service_tag'] ?? 'tp';
 
 // service_tag bestimmt das Card-Branding ('tp' -> Steuern-Gruen, 'lp' -> Recht-Blau).
 $card_service = ( 'lp' === $service_tag ) ? 'lp' : 'tp';

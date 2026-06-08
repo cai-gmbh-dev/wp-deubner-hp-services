@@ -24,7 +24,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 $collection  = dhps_collection_or_empty( $collection, 'tp' );
 $rebuilt     = dhps_tp_collection_to_legacy_categories( $collection );
 $categories  = $rebuilt['categories'];
-$service_tag = $data['service_tag'] ?? 'tp';
 
 wp_enqueue_script( 'dhps-tp-js' );
 ?>

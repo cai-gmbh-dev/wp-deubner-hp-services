@@ -24,11 +24,11 @@ foreach ( $collection as $item ) {
     }
 }
 if ( ! empty( $rebuilt ) ) {
-    $data = $rebuilt;
+    $months = $rebuilt;
 }
 ?>
 <div class="dhps-termine dhps-termine--compact<?php echo esc_attr( $custom_class ); ?>">
-    <?php foreach ( $data as $month ) : ?>
+    <?php foreach ( $months as $month ) : ?>
         <div class="dhps-termine__month">
             <?php if ( ! empty( $month['title'] ) ) : ?>
                 <h4 class="dhps-termine__title"><?php echo esc_html( $month['title'] ); ?></h4>

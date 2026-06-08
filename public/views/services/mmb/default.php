@@ -38,7 +38,6 @@ $collection    = dhps_collection_or_empty( $collection, 'mmb' );
 $categories    = dhps_mmb_collection_to_legacy_categories( $collection );
 $search_config = (array) $collection->get_meta( 'search_config', array() );
 
-$service_tag    = $data['service_tag'] ?? 'mmb';
 $download_label = ( 'mil' === $service_tag ) ? 'Infografik herunterladen' : 'PDF herunterladen';
 $is_mil         = ( 'mil' === $service_tag );
 

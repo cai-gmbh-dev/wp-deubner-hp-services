@@ -16,6 +16,78 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+if ( ! function_exists( 'dhps_tp_collection_to_legacy_categories' ) ) {
+
+	/**
+	 * Rekonstruiert die Legacy-Pseudo-Shape {featured, categories} aus einer
+	 * TP-/LP-Collection (v0.18.0 Helper-Extraktion).
+	 *
+	 * Erwartet eine Collection mit TP-Adapter-typischer Meta-Shape:
+	 *
+	 *   - meta['featured_video_id'] - ID des Featured-Items (oder null)
+	 *   - meta['categories_order']  - Liste der Category-Index-Strings
+	 *   - meta['categories_meta']   - Lookup category_idx -> {name, ...}
+	 *
+	 * Liefert ein Tupel:
+	 *
+	 *   array(
+	 *     'featured'   => array|null,   // Legacy-Video-Shape oder null
+	 *     'categories' => array,        // Liste {name, videos[]} in Order
+	 *   )
+	 *
+	 * @since 0.18.0
+	 *
+	 * @param DHPS_Content_Collection $collection TP- oder LP-Collection.
+	 *
+	 * @return array{featured: ?array, categories: array}
+	 */
+	function dhps_tp_collection_to_legacy_categories( DHPS_Content_Collection $collection ): array {
+		$featured_id      = $collection->get_meta( 'featured_video_id', null );
+		$categories_order = (array) $collection->get_meta( 'categories_order', array() );
+		$categories_meta  = (array) $collection->get_meta( 'categories_meta', array() );
+
+		$featured          = null;
+		$items_by_category = array();
+
+		foreach ( $collection as $item ) {
+			/** @var DHPS_Content_Item $item */
+			$legacy_video = dhps_tp_item_to_legacy_video( $item );
+			if ( empty( $legacy_video ) ) {
+				continue;
+			}
+
+			$is_featured = ! empty( $item->meta['is_featured'] )
+				|| ( null !== $featured_id && $item->id === $featured_id );
+			if ( $is_featured ) {
+				$featured = $legacy_video;
+				continue;
+			}
+
+			$cat_idx_item = $item->category ?? '';
+			if ( '' === $cat_idx_item ) {
+				continue;
+			}
+			$items_by_category[ $cat_idx_item ][] = $legacy_video;
+		}
+
+		$categories = array();
+		foreach ( $categories_order as $cat_idx_iter ) {
+			$cat_meta_iter = isset( $categories_meta[ $cat_idx_iter ] ) && is_array( $categories_meta[ $cat_idx_iter ] )
+				? $categories_meta[ $cat_idx_iter ]
+				: array();
+			$categories[]  = array(
+				'name'   => isset( $cat_meta_iter['name'] ) ? (string) $cat_meta_iter['name'] : '',
+				'videos' => isset( $items_by_category[ $cat_idx_iter ] ) ? $items_by_category[ $cat_idx_iter ] : array(),
+			);
+		}
+
+		return array(
+			'featured'   => $featured,
+			'categories' => $categories,
+		);
+	}
+}
+
 if ( ! function_exists( 'dhps_tp_item_to_legacy_video' ) ) {
     /**
      * Wandelt ein DHPS_Content_Item (type=video) in die Legacy-Video-Array-

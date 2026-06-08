@@ -139,10 +139,13 @@ class DHPS_Steuertermine {
             unset( $month );
         }
 
-        // Collection-Build (v0.17.5 TD-V0173-1): nur wenn keine Filter-Atts
-        // aktiv sind. Force-Legacy bei month!=all oder count>0 schuetzt vor
-        // Drift zwischen gefilterter Item-Liste und Collection-Items.
-        $collection = $this->get_collection( $atts, $parsed );
+        // v0.18.0: Collection IMMER bauen aus gefilterten $tax_dates (analog
+        // MAES_Modules-Migration). Force-Legacy faellt weg, weil Collection-
+        // Items in der gefilterten Reihenfolge sind. Templates haben kein
+        // $has_collection-Pattern mehr und lesen direkt aus Collection.
+        $filtered_parsed              = $parsed;
+        $filtered_parsed['tax_dates'] = $tax_dates;
+        $collection                   = dhps_build_collection_for( 'mio', $filtered_parsed );
 
         // Template rendern.
         $layout    = sanitize_key( $atts['layout'] );

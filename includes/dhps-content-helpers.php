@@ -81,6 +81,113 @@ if ( ! function_exists( 'dhps_build_collection_for' ) ) {
 	}
 }
 
+if ( ! function_exists( 'dhps_collection_or_empty' ) ) {
+
+	/**
+	 * Sichert eine niemals-null DHPS_Content_Collection-Instanz zu.
+	 *
+	 * Hintergrund (v0.18.0 Legacy-Pfad-Entfernung): Templates verlassen sich
+	 * darauf dass die Pipeline IMMER eine Collection liefert. Bei Adapter-
+	 * Fehlern (Throw, fehlende Registrierung, Pipeline-Sandbox-Fallback)
+	 * koennte `$collection` aber null sein. Dieser Helper haert das ab,
+	 * damit die Templates keinen `else`-Branch mehr brauchen.
+	 *
+	 * Defense-in-Depth-Strategie 3.B:
+	 *
+	 * - Pipeline patcht null bereits auf leere Collection (Strategie 3.A)
+	 * - Helper haert das nochmal ab als Belt-and-Braces (3.B)
+	 * - WP_DEBUG-Log bei null-Input fuer Drift-Diagnose
+	 *
+	 * @since 0.18.0
+	 *
+	 * @param DHPS_Content_Collection|null $collection Mögliche Collection oder null.
+	 * @param string                       $service    Service-Tag fuer die Fallback-Collection.
+	 *
+	 * @return DHPS_Content_Collection Garantiert nicht-null.
+	 */
+	function dhps_collection_or_empty( ?DHPS_Content_Collection $collection, string $service ): DHPS_Content_Collection {
+		if ( $collection instanceof DHPS_Content_Collection ) {
+			return $collection;
+		}
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- diagnostisch, WP_DEBUG-gated.
+			error_log( sprintf(
+				'DHPS Template-Drift: collection_or_empty fallback fuer Service "%s" (Pipeline-Garantie 3.A muesste das verhindern)',
+				$service
+			) );
+		}
+
+		return new DHPS_Content_Collection( $service, array(), array() );
+	}
+}
+
+if ( ! function_exists( 'dhps_mmb_collection_to_legacy_categories' ) ) {
+
+	/**
+	 * Rekonstruiert die Legacy-`$categories`-Shape aus einer MMB-Collection.
+	 *
+	 * Pseudo-Rebuild-Pattern aus v0.17.1 - extrahiert in einen Helper in
+	 * v0.18.0 (Legacy-Pfad-Entfernung), damit die 3 MMB-Templates (default/
+	 * card/compact) keine Duplikat-Logik im Header tragen.
+	 *
+	 * Erwartet eine Collection mit MMB-typischer Meta-Shape:
+	 *
+	 *   - meta['categories_order'] - Liste der Category-IDs (Reihenfolge)
+	 *   - meta['categories_meta'] - Lookup category_id -> {name, icon_slug, ...}
+	 *
+	 * Liefert ein Array von Categories mit jeweils {id, name, icon_slug, fact_sheets[]}.
+	 *
+	 * @since 0.18.0
+	 *
+	 * @param DHPS_Content_Collection $collection MMB-Collection (oder MIL).
+	 *
+	 * @return array<int, array{id:string, name:string, icon_slug:string, fact_sheets:array}>
+	 */
+	function dhps_mmb_collection_to_legacy_categories( DHPS_Content_Collection $collection ): array {
+		$categories_order_raw = $collection->get_meta( 'categories_order', array() );
+		$categories_overview  = is_array( $categories_order_raw ) ? $categories_order_raw : array();
+		$categories_meta      = (array) $collection->get_meta( 'categories_meta', array() );
+
+		if ( empty( $categories_overview ) ) {
+			return array();
+		}
+
+		// Items pro Kategorie sammeln (Pseudo-Rebuild der Legacy-Shape).
+		$items_by_category = array();
+		foreach ( $collection as $item ) {
+			/** @var DHPS_Content_Item $item */
+			$cat_id_item = $item->category ?? '';
+			if ( '' === $cat_id_item ) {
+				continue;
+			}
+			$items_by_category[ $cat_id_item ][] = array(
+				'id'          => isset( $item->meta['source_id'] ) ? (string) $item->meta['source_id'] : '',
+				'title'       => $item->title,
+				'description' => null !== $item->excerpt ? $item->excerpt : '',
+				'pdf_params'  => isset( $item->meta['pdf_params'] ) && is_array( $item->meta['pdf_params'] )
+					? $item->meta['pdf_params']
+					: array(),
+			);
+		}
+
+		$categories = array();
+		foreach ( $categories_overview as $cat_id_iter ) {
+			$cat_meta_iter = isset( $categories_meta[ $cat_id_iter ] ) && is_array( $categories_meta[ $cat_id_iter ] )
+				? $categories_meta[ $cat_id_iter ]
+				: array();
+			$categories[]  = array(
+				'id'          => (string) $cat_id_iter,
+				'name'        => isset( $cat_meta_iter['name'] ) ? (string) $cat_meta_iter['name'] : '',
+				'icon_slug'   => isset( $cat_meta_iter['icon_slug'] ) ? (string) $cat_meta_iter['icon_slug'] : '',
+				'fact_sheets' => isset( $items_by_category[ $cat_id_iter ] ) ? $items_by_category[ $cat_id_iter ] : array(),
+			);
+		}
+
+		return $categories;
+	}
+}
+
 if ( ! function_exists( 'dhps_mmb_search_to_collection' ) ) {
 
 	/**

@@ -17,7 +17,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$categories  = $data['categories'] ?? array();
+// v0.18.0: TD-V0172-1 - tp/compact migriert. Markup bytewise unveraendert,
+// JS-Selektoren `[data-video-slug]/[data-poster-url]/[data-v-modus]` und
+// `.dhps-tp-compact__item` unangetastet. initCompactAccordion-Bug-Risiko
+// gehedged durch identische HTML-Shape.
+$collection  = dhps_collection_or_empty( $collection, 'tp' );
+$rebuilt     = dhps_tp_collection_to_legacy_categories( $collection );
+$categories  = $rebuilt['categories'];
 $service_tag = $data['service_tag'] ?? 'tp';
 
 wp_enqueue_script( 'dhps-tp-js' );

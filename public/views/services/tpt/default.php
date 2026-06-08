@@ -38,25 +38,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// v0.17.2: Collection-Pfad wenn Adapter aktiv, sonst Legacy. Bytewise-BC
-// durch Pseudo-Rebuild: aus Collection wird $video + $tpt_config in der
-// alten Shape rekonstruiert. Render-Code unterhalb bleibt UNVERAENDERT.
-$has_collection = isset( $collection ) && $collection instanceof DHPS_Content_Collection;
-
-if ( $has_collection ) {
-	$tpt_config = (array) $collection->get_meta( 'tpt_config', array() );
-	$video      = null;
-	foreach ( $collection as $item ) {
-		$legacy = dhps_tp_item_to_legacy_video( $item );
-		if ( ! empty( $legacy ) ) {
-			$video = $legacy;
-			break;
-		}
+// v0.18.0: Pipeline-Garantie (siehe MMB/default.php Header).
+$collection = dhps_collection_or_empty( $collection, 'tpt' );
+$tpt_config = (array) $collection->get_meta( 'tpt_config', array() );
+$video      = null;
+foreach ( $collection as $item ) {
+	$legacy = dhps_tp_item_to_legacy_video( $item );
+	if ( ! empty( $legacy ) ) {
+		$video = $legacy;
+		break;
 	}
-} else {
-	// Legacy-Pfad (Pre-v0.17.2 BC).
-	$tpt_config = isset( $data['tpt_config'] ) && is_array( $data['tpt_config'] ) ? $data['tpt_config'] : array();
-	$video      = isset( $data['video'] ) && is_array( $data['video'] ) ? $data['video'] : null;
 }
 
 $layout_class  = isset( $layout_class ) && is_string( $layout_class ) ? $layout_class : 'dhps-layout--default';

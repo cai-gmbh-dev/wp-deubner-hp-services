@@ -36,53 +36,29 @@ $show_teaser  = isset( $show_teaser ) ? (bool) $show_teaser : true;
 $first_open   = isset( $first_open ) ? (bool) $first_open : false;
 $custom_class = isset( $custom_class ) && is_string( $custom_class ) ? $custom_class : '';
 
-// --- Daten-Pfad waehlen: Collection wenn verfuegbar, sonst Legacy. ---
-$has_collection = isset( $collection ) && $collection instanceof DHPS_Content_Collection;
+// v0.18.0: Pipeline-Garantie (siehe MMB/default.php Header).
+$collection      = dhps_collection_or_empty( $collection, 'maes' );
+$news_collection = $collection->filter(
+	static function ( $item ) {
+		return $item instanceof DHPS_Content_Item && 'news' === $item->type;
+	}
+);
 
 $news_items = array();
 
-if ( $has_collection ) {
-	// v0.17.0-Pfad: Collection -> News-Items -> ContentCard-Props.
-	$news_collection = $collection->filter(
-		static function ( $item ) {
-			return $item instanceof DHPS_Content_Item && 'news' === $item->type;
-		}
+foreach ( $news_collection as $item ) {
+	/** @var DHPS_Content_Item $item */
+	$news_item = array(
+		'type'        => 'news',
+		'service'     => 'maes',
+		'title'       => $item->title,
+		'body_html'   => $item->body,
+		'collapsible' => true,
 	);
-
-	foreach ( $news_collection as $item ) {
-		/** @var DHPS_Content_Item $item */
-		$news_item = array(
-			'type'        => 'news',
-			'service'     => 'maes',
-			'title'       => $item->title,
-			'body_html'   => $item->body,
-			'collapsible' => true,
-		);
-		if ( $show_teaser && null !== $item->excerpt && '' !== $item->excerpt ) {
-			$news_item['teaser'] = $item->excerpt;
-		}
-		$news_items[] = $news_item;
+	if ( $show_teaser && null !== $item->excerpt && '' !== $item->excerpt ) {
+		$news_item['teaser'] = $item->excerpt;
 	}
-} else {
-	// Legacy-Pfad (vor v0.17.0): Parser-Array manuell durchlaufen.
-	if ( ! empty( $news ) && is_array( $news ) ) {
-		foreach ( $news as $article ) {
-			if ( ! is_array( $article ) || empty( $article['title'] ) ) {
-				continue;
-			}
-			$item = array(
-				'type'        => 'news',
-				'service'     => 'maes',
-				'title'       => (string) $article['title'],
-				'body_html'   => isset( $article['body_html'] ) ? (string) $article['body_html'] : '',
-				'collapsible' => true,
-			);
-			if ( $show_teaser && ! empty( $article['teaser'] ) ) {
-				$item['teaser'] = (string) $article['teaser'];
-			}
-			$news_items[] = $item;
-		}
-	}
+	$news_items[] = $news_item;
 }
 
 $wrapper_class = 'dhps-service dhps-service--maes dhps-service--maes-aktuelles';

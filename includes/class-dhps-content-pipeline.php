@@ -174,6 +174,14 @@ class DHPS_Content_Pipeline {
 			}
 		}
 
+		// 5b. Pipeline-Garantie 3.A (seit v0.18.0): Templates sehen NIE null.
+		//     Falls Adapter nicht registriert (kein for_service-Match) ODER
+		//     Throw im catch-Block -> leere Collection als Fallback. Damit
+		//     koennen Templates ihren else-Branch ersatzlos streichen.
+		if ( ! $collection instanceof DHPS_Content_Collection ) {
+			$collection = new DHPS_Content_Collection( $tag, array(), array() );
+		}
+
 		// 6. Geparste Daten ueber Service-Template rendern.
 		return $this->renderer->render_parsed( $parsed_data, $tag, $layout, $css_class, $collection );
 	}

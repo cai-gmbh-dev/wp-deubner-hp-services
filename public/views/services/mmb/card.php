@@ -28,52 +28,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// --- Daten-Pfad waehlen: Collection wenn verfuegbar, sonst Legacy. ---
-// v0.17.1: Pseudo-Rebuild der Legacy-$categories-Shape aus Collection-Meta
-// + Items, damit der Render-Code unter der Linie bytewise stabil bleibt
-// (Discovery v0.17.1 Sektion 4.2/4.3).
-$has_collection = isset( $collection ) && $collection instanceof DHPS_Content_Collection;
-
-if ( $has_collection ) {
-	$categories_order_raw = $collection->get_meta( 'categories_order', array() );
-	$categories_overview  = is_array( $categories_order_raw ) ? $categories_order_raw : array();
-	$categories_meta      = (array) $collection->get_meta( 'categories_meta', array() );
-}
-
-if ( $has_collection && ! empty( $categories_overview ) ) {
-	$items_by_category = array();
-	foreach ( $collection as $item ) {
-		/** @var DHPS_Content_Item $item */
-		$cat_id_item = $item->category ?? '';
-		if ( '' === $cat_id_item ) {
-			continue;
-		}
-		$items_by_category[ $cat_id_item ][] = array(
-			'id'          => isset( $item->meta['source_id'] ) ? (string) $item->meta['source_id'] : '',
-			'title'       => $item->title,
-			'description' => null !== $item->excerpt ? $item->excerpt : '',
-			'pdf_params'  => isset( $item->meta['pdf_params'] ) && is_array( $item->meta['pdf_params'] )
-				? $item->meta['pdf_params']
-				: array(),
-		);
-	}
-	$categories = array();
-	foreach ( $categories_overview as $cat_id_iter ) {
-		$cat_meta_iter = isset( $categories_meta[ $cat_id_iter ] ) && is_array( $categories_meta[ $cat_id_iter ] )
-			? $categories_meta[ $cat_id_iter ]
-			: array();
-		$categories[] = array(
-			'id'          => $cat_id_iter,
-			'name'        => isset( $cat_meta_iter['name'] ) ? (string) $cat_meta_iter['name'] : '',
-			'icon_slug'   => isset( $cat_meta_iter['icon_slug'] ) ? (string) $cat_meta_iter['icon_slug'] : '',
-			'fact_sheets' => isset( $items_by_category[ $cat_id_iter ] ) ? $items_by_category[ $cat_id_iter ] : array(),
-		);
-	}
-	$search_config = (array) $collection->get_meta( 'search_config', array() );
-} else {
-	$categories    = $data['categories'] ?? array();
-	$search_config = $data['search_config'] ?? array();
-}
+// v0.18.0: Pipeline garantiert eine DHPS_Content_Collection (kein else-Branch
+// mehr, siehe MMB/default.php Header).
+$collection    = dhps_collection_or_empty( $collection, 'mmb' );
+$categories    = dhps_mmb_collection_to_legacy_categories( $collection );
+$search_config = (array) $collection->get_meta( 'search_config', array() );
 
 $service_tag    = $data['service_tag'] ?? 'mmb';
 $download_label = ( 'mil' === $service_tag ) ? 'Infografik herunterladen' : 'PDF herunterladen';

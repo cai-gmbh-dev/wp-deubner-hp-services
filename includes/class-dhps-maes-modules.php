@@ -235,10 +235,13 @@ class DHPS_MAES_Modules {
 
 		wp_enqueue_script( 'dhps-tp-js' );
 
-		// v0.17.1: Sub-Shortcodes-Bridge. Adapter-Aufruf via Helper, mit
-		// Force-Legacy bei Filter-Atts. $collection darf null sein - das
-		// Template hat seit v0.17.0 das $has_collection-Pattern.
-		$collection = $this->get_collection( 'videos', $atts );
+		// v0.18.0 Sub-Shortcode-Filter-Migration (Discovery 33 Sektion 2.1
+		// Option B): Filter wirken auf $data VOR Adapter-Build. Damit liefert
+		// der Adapter eine Collection mit gefilterten Items - Templates haben
+		// keinen else-Branch mehr und sehen IMMER eine Collection.
+		$filtered_data = $data;
+		$filtered_data['videos'] = $videos;
+		$collection = dhps_build_collection_for( 'maes', $filtered_data );
 
 		ob_start();
 		include $template;
@@ -284,10 +287,11 @@ class DHPS_MAES_Modules {
 		// brauchen kein eigenes MMB-Akkordeon-JS mehr. Spart ~10 KB JS bei
 		// [maes_merkblaetter]-only-Seiten.
 
-		// v0.17.1: Sub-Shortcodes-Bridge. [maes_merkblaetter] hat heute keine
-		// Filter-Atts -> Force-Legacy greift nicht, Collection wird immer
-		// uebergeben (sofern Adapter registriert ist).
-		$collection = $this->get_collection( 'merkblaetter', $atts );
+		// v0.18.0: Collection IMMER bauen (analog render_videos). [maes_merkblaetter]
+		// hat heute keine Filter-Atts, daher gefiltertes $data === volles $data.
+		$filtered_data = $data;
+		$filtered_data['merkblaetter'] = $merkblaetter;
+		$collection = dhps_build_collection_for( 'maes', $filtered_data );
 
 		ob_start();
 		include $template;
@@ -330,10 +334,11 @@ class DHPS_MAES_Modules {
 			return '';
 		}
 
-		// v0.17.1: Sub-Shortcodes-Bridge. [maes_aktuelles] hat heute keine
-		// Filter-Atts -> Force-Legacy greift nicht, Collection wird immer
-		// uebergeben (sofern Adapter registriert ist).
-		$collection = $this->get_collection( 'aktuelles', $atts );
+		// v0.18.0: Collection IMMER bauen (analog render_videos). [maes_aktuelles]
+		// hat heute keine Filter-Atts, daher gefiltertes $data === volles $data.
+		$filtered_data = $data;
+		$filtered_data['news'] = $news;
+		$collection = dhps_build_collection_for( 'maes', $filtered_data );
 
 		ob_start();
 		include $template;

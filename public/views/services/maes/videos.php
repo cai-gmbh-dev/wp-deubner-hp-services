@@ -47,119 +47,60 @@ wp_enqueue_script( 'dhps-tp-js' );
 // Eindeutige Listen-ID fuer ARIA / Alpine-Scope.
 $list_id = 'maes-videos-' . wp_unique_id();
 
-// --- Daten-Pfad waehlen: Collection wenn verfuegbar, sonst Legacy. ---
-$has_collection = isset( $collection ) && $collection instanceof DHPS_Content_Collection;
+// v0.18.0: Pipeline-Garantie (siehe MMB/default.php Header). Modules-Layer
+// filtert $data BEVOR Adapter-Build, daher iteriert das Template direkt ueber
+// gefilterte Items - kein else-Branch mehr.
+$collection       = dhps_collection_or_empty( $collection, 'maes' );
+$video_collection = $collection->filter(
+	static function ( $item ) {
+		return $item instanceof DHPS_Content_Item && 'video' === $item->type;
+	}
+);
 
 $items       = array();
 $video_index = 0;
 
-if ( $has_collection ) {
-	// v0.17.0-Pfad: Collection -> Video-Items -> ContentCard-Props.
-	$video_collection = $collection->filter(
-		static function ( $item ) {
-			return $item instanceof DHPS_Content_Item && 'video' === $item->type;
-		}
+foreach ( $video_collection as $item ) {
+	/** @var DHPS_Content_Item $item */
+	$slug = isset( $item->media['slug'] ) ? (string) $item->media['slug'] : '';
+	if ( '' === $slug ) {
+		continue;
+	}
+
+	$poster      = isset( $item->media['poster'] ) ? (string) $item->media['poster'] : '';
+	$title       = $item->title;
+	$description = null !== $item->excerpt ? $item->excerpt : '';
+
+	$is_hidden = ( $lazy_count > 0 && $video_index >= $lazy_count );
+
+	$extra_class  = 'dhps-tp-card';
+	$extra_class .= $is_hidden ? ' dhps-tp-card--lazy-hidden' : '';
+
+	$items[] = array(
+		'type'       => 'video',
+		'title'      => $title,
+		'teaser'     => $description,
+		'media_url'  => $poster,
+		'media_alt'  => $title,
+		'service'    => 'maes',
+		'class'      => $extra_class,
+		'actions'    => array(
+			array(
+				'label'   => __( 'Video abspielen', 'wp-deubner-hp-services' ),
+				'href'    => '#play',
+				'icon'    => 'play',
+				'primary' => true,
+			),
+		),
+		'data_attrs' => array(
+			'video-slug'  => $slug,
+			'poster-url'  => $poster,
+			'v-modus'     => '0',
+			'video-index' => (string) $video_index,
+		),
 	);
 
-	foreach ( $video_collection as $item ) {
-		/** @var DHPS_Content_Item $item */
-		$slug = isset( $item->media['slug'] ) ? (string) $item->media['slug'] : '';
-		if ( '' === $slug ) {
-			continue;
-		}
-
-		$poster      = isset( $item->media['poster'] ) ? (string) $item->media['poster'] : '';
-		$title       = $item->title;
-		$description = null !== $item->excerpt ? $item->excerpt : '';
-
-		// Lazy-Hidden-Status: erste $lazy_count Karten sichtbar, Rest hidden
-		// (TP-JS uebernimmt das Aufblenden via Load-More-Button).
-		$is_hidden = ( $lazy_count > 0 && $video_index >= $lazy_count );
-
-		$extra_class  = 'dhps-tp-card';
-		$extra_class .= $is_hidden ? ' dhps-tp-card--lazy-hidden' : '';
-
-		$items[] = array(
-			'type'       => 'video',
-			'title'      => $title,
-			'teaser'     => $description,
-			'media_url'  => $poster,
-			'media_alt'  => $title,
-			'service'    => 'maes',
-			'class'      => $extra_class,
-			'actions'    => array(
-				array(
-					'label'   => __( 'Video abspielen', 'wp-deubner-hp-services' ),
-					'href'    => '#play',
-					'icon'    => 'play',
-					'primary' => true,
-				),
-			),
-			// Data-Attribute fuer den TP-Player (Event-Delegation auf [data-video-slug]).
-			'data_attrs' => array(
-				'video-slug'  => $slug,
-				'poster-url'  => $poster,
-				'v-modus'     => '0',
-				'video-index' => (string) $video_index,
-			),
-		);
-
-		++$video_index;
-	}
-} else {
-	// Legacy-Pfad (vor v0.17.0): Parser-Array manuell in ContentCard-Props uebersetzen.
-	foreach ( $videos as $video ) {
-		if ( ! is_array( $video ) ) {
-			continue;
-		}
-
-		$title       = isset( $video['title'] ) ? (string) $video['title'] : '';
-		$description = isset( $video['description'] ) ? (string) $video['description'] : '';
-		$slug        = isset( $video['video_slug'] ) ? (string) $video['video_slug'] : '';
-		$poster      = isset( $video['poster_url'] ) ? (string) $video['poster_url'] : '';
-
-		if ( '' === $slug ) {
-			continue;
-		}
-
-		// Lazy-Hidden-Status: erste $lazy_count Karten sichtbar, Rest hidden
-		// (TP-JS uebernimmt das Aufblenden via Load-More-Button).
-		$is_hidden = ( $lazy_count > 0 && $video_index >= $lazy_count );
-
-		// Zusatz-Klassen so gewaehlt, dass dhps-tp.js die Karten findet:
-		// - `dhps-tp-card`           : Filter- und Lazy-Selektor in dhps-tp.js
-		// - `dhps-tp-card--lazy-hidden` : Lazy-Load-Marker fuer initial versteckte Karten
-		$extra_class  = 'dhps-tp-card';
-		$extra_class .= $is_hidden ? ' dhps-tp-card--lazy-hidden' : '';
-
-		$items[] = array(
-			'type'       => 'video',
-			'title'      => $title,
-			// Teaser wird per CSS line-clamp gekuerzt (keine PHP-Truncation).
-			'teaser'     => $description,
-			'media_url'  => $poster,
-			'media_alt'  => $title,
-			'service'    => 'maes',
-			'class'      => $extra_class,
-			'actions'    => array(
-				array(
-					'label'   => __( 'Video abspielen', 'wp-deubner-hp-services' ),
-					'href'    => '#play',
-					'icon'    => 'play',
-					'primary' => true,
-				),
-			),
-			// Data-Attribute fuer den TP-Player (Event-Delegation auf [data-video-slug]).
-			'data_attrs' => array(
-				'video-slug'  => $slug,
-				'poster-url'  => $poster,
-				'v-modus'     => '0',
-				'video-index' => (string) $video_index,
-			),
-		);
-
-		++$video_index;
-	}
+	++$video_index;
 }
 
 // Empty-State: nichts zu rendern -> ContentList uebernimmt mit empty_state-Prop.

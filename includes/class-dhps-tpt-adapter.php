@@ -194,6 +194,13 @@ final class DHPS_TPT_Adapter implements DHPS_Content_Adapter_Interface {
 		);
 		if ( '' !== $datum ) {
 			$item_meta['datum'] = $datum;
+			// v0.18.1 (Option C): Beimaterial-Feld meta.date_iso analog TP-Adapter.
+			if ( function_exists( 'dhps_partial_date_to_iso' ) ) {
+				$date_iso = dhps_partial_date_to_iso( $datum, 'mm_yy' );
+				if ( null !== $date_iso ) {
+					$item_meta['date_iso'] = $date_iso;
+				}
+			}
 		}
 
 		// Excerpt nur wenn Teaser != '', sonst null (DTO erlaubt null).

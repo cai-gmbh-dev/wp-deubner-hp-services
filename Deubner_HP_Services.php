@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Deubner Homepage Services
- * Version: 0.18.0
+ * Version: 0.18.1
  * Plugin URI: https://github.com/cai-gmbh-dev/wp-deubner-hp-services
  * Description: Integration der Deubner Homepage Services rund um die Themen Steuer und Recht via Shortcode
  * Based On: Frank Malburg
@@ -26,7 +26,7 @@
  * (siehe Discovery 26-EINHEITLICHES-DATENMODELL-PLAN-v0170 Sektion 8 TD-2).
  *
  * @package Deubner Homepage-Service
- * @version 0.18.0
+ * @version 0.18.1
  * @author Deubner Verlag <mi-online-technik@deubner-verlag.de>
  * @copyright Copyright (c) 2004 - 2026, Deubner Verlag GmbH & Co. KG / CAI GmbH
  * @link https://www.deubner-online.de/
@@ -45,7 +45,7 @@ if ( ! defined( 'WPINC' ) ) {
 */
 
 /** @var string Plugin-Version. */
-define( 'DEUBNER_HP_SERVICES_VERSION', '0.18.0' );
+define( 'DEUBNER_HP_SERVICES_VERSION', '0.18.1' );
 
 /** @var string Absoluter Pfad zum Plugin-Verzeichnis (mit trailing slash). */
 define( 'DEUBNER_HP_SERVICES_PATH', plugin_dir_path( __FILE__ ) );
@@ -145,6 +145,17 @@ require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-tp-content-helpers.php';
 | (3 Templates nutzen den Helper im Pseudo-Rebuild-Pfad).
 */
 require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-mio-content-helpers.php';
+
+/*
+|--------------------------------------------------------------------------
+| Datum-Normalisierungs-Helper (v0.18.1, Option C aus Discovery 34)
+|--------------------------------------------------------------------------
+| Helper dhps_partial_date_to_iso + dhps_partial_date_mm_yy_to_iso +
+| dhps_partial_date_de_month_year_to_iso. TP/TPT/MIO-Adapter setzen
+| `meta.date_iso` als Beimaterial; Templates lesen weiter `meta.datum`
+| bzw. `$month['title']` fuer Anzeige (BC).
+*/
+require_once DEUBNER_HP_SERVICES_PATH . 'includes/dhps-date-helpers.php';
 
 /*
 |--------------------------------------------------------------------------

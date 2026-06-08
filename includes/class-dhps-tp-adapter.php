@@ -289,6 +289,15 @@ final class DHPS_TP_Adapter implements DHPS_Content_Adapter_Interface {
 		);
 		if ( '' !== $datum ) {
 			$meta['datum'] = $datum;
+			// v0.18.1 (Option C): Beimaterial-Feld meta.date_iso fuer
+			// kuenftige Sortier-/Filter-Konsumenten. Helper returnt null bei
+			// Parse-Fehler -> Feld wird gar nicht gesetzt (isset()-Vertrag).
+			if ( function_exists( 'dhps_partial_date_to_iso' ) ) {
+				$date_iso = dhps_partial_date_to_iso( $datum, 'mm_yy' );
+				if ( null !== $date_iso ) {
+					$meta['date_iso'] = $date_iso;
+				}
+			}
 		}
 		if ( ! $is_featured ) {
 			$meta['category_index'] = $cat_idx;

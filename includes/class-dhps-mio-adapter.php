@@ -139,6 +139,17 @@ final class DHPS_MIO_Adapter implements DHPS_Content_Adapter_Interface {
 				$meta['footnote'] = $footnote;
 			}
 
+			// v0.18.1 (Option C): Beimaterial-Feld meta.date_iso fuer kuenftige
+			// Sortier-/Filter-Konsumenten. Nur setzen wenn Parser-Title (NICHT
+			// Fallback-Title 'Monat N') in "MONATNAME JAHR" parsebar ist.
+			// Helper returnt null bei Garbage -> Feld wird gar nicht gesetzt.
+			if ( '' !== trim( $raw_title ) && function_exists( 'dhps_partial_date_to_iso' ) ) {
+				$date_iso = dhps_partial_date_to_iso( $raw_title, 'de_month_year' );
+				if ( null !== $date_iso ) {
+					$meta['date_iso'] = $date_iso;
+				}
+			}
+
 			$items[] = new DHPS_Content_Item(
 				$item_id,
 				$service,

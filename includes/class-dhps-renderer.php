@@ -172,6 +172,19 @@ class DHPS_Renderer {
 		// gefilterte $data-Array. Externe Aufrufer von render_parsed()
 		// muessen den Filter ggf. selbst zuvor aufrufen.
 
+		// v0.19.0 MAJOR: $service_tag direkt im Template-Scope durchreichen.
+		// 10 Templates lasen bisher $data['service_tag'] - die brauchen mit
+		// $service_tag direkt im Scope kein $data-Lookup mehr.
+		$service_tag = $tag;
+
+		// v0.19.0 MAJOR: $data wird Deprecated-Data-Proxy. Theme-Overrides
+		// die noch $data['...'] lesen, bekommen WP_DEBUG-Notice und sehen
+		// einen Hinweis im Admin-Bar (via _doing_it_wrong). Plugin-Templates
+		// nutzen ausschliesslich $collection / $service_tag - 0 Notice-Spam.
+		if ( class_exists( 'DHPS_Deprecated_Data_Proxy' ) ) {
+			$data = new DHPS_Deprecated_Data_Proxy( $data, $tag, $layout );
+		}
+
 		// Template rendern via Output-Buffering.
 		ob_start();
 		include $template_file;

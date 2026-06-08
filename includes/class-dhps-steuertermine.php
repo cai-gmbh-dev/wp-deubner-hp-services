@@ -227,7 +227,12 @@ class DHPS_Steuertermine {
 
         $data         = $tax_dates;
         $custom_class = ! empty( $css_class ) ? ' ' . $css_class : '';
-        // $collection wird in den Template-Scope mit gereicht (kann null sein).
+        // v0.19.0: $service_tag direkt im Template-Scope (analog Renderer).
+        // KEIN Deprecated-Data-Proxy hier: Steuertermine-Templates iterieren
+        // `$data` direkt als Tax-Dates-Array (`foreach ( $data as $month )`) -
+        // Proxy wuerde bei leerem Pseudo-Rebuild eine Notice-Lawine ausloesen.
+        $service_tag = 'mio';
+        // $collection wird in den Template-Scope mit gereicht.
 
         ob_start();
         include $template;

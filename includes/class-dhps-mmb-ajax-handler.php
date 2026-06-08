@@ -309,6 +309,26 @@ class DHPS_MMB_AJAX_Handler {
 			'html'          => $rendered_html,
 		);
 
+		// v0.18.2 TD-V0171-2: Collection-Side-Channel fuer DTO-Konsistenz.
+		// Frontend-JS-Vertrag bleibt BYTEWISE UNVERAENDERT - $response ist die
+		// JSON-Response. Plugins/Themes koennen die Collection via Action-Hook
+		// konsumieren (z.B. fuer eigene Akkordeon-Renders, Analytics).
+		if ( function_exists( 'dhps_mmb_category_to_collection' ) ) {
+			$category_collection = dhps_mmb_category_to_collection( $category, $service );
+
+			/**
+			 * Action: erlaubt Plugins/Themes die Lazy-Akkordeon-Category-Daten
+			 * als Collection zu konsumieren. Default-Verhalten unveraendert.
+			 *
+			 * @since 0.18.2
+			 *
+			 * @param DHPS_Content_Collection|null $category_collection Collection oder null.
+			 * @param array                        $category            Rohes Category-Array.
+			 * @param string                       $service             'mmb' oder 'mil'.
+			 */
+			do_action( 'dhps_mmb_category_collection', $category_collection, $category, $service );
+		}
+
 		wp_send_json_success( $response );
 	}
 

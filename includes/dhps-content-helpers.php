@@ -307,3 +307,280 @@ if ( ! function_exists( 'dhps_mmb_search_to_collection' ) ) {
 		}
 	}
 }
+
+if ( ! function_exists( 'dhps_mmb_category_to_collection' ) ) {
+
+	/**
+	 * Wandelt eine MMB-Kategorie-Datenstruktur in eine DHPS_Content_Collection
+	 * (Side-Channel fuer MMB-Lazy-Akkordeon-AJAX, v0.18.2 TD-V0171-2).
+	 *
+	 * Wie `dhps_mmb_search_to_collection` (Option D aus Discovery v0.17.5):
+	 * der AJAX-Handler liefert die JSON-Response BYTEWISE unveraendert; die
+	 * Collection ist nur ueber den Action-Hook `dhps_mmb_category_collection`
+	 * fuer Plugins/Themes zugaenglich.
+	 *
+	 * Eingabe (Category-Shape aus DHPS_MMB_Parser):
+	 *   {
+	 *     'id'          => string,
+	 *     'name'        => string,
+	 *     'icon_slug'   => string,
+	 *     'fact_sheets' => [ { id, title, description, pdf_params }, ... ],
+	 *   }
+	 *
+	 * Mapping:
+	 * - Items: type='document', Item-ID `{service}-cat-{cat_id}-doc-{sheet_id-or-idx}`
+	 *   (disambiguiert gegen Initial-Render und Search-Items)
+	 * - Item-meta: source_id, pdf_params, category_id
+	 * - Collection-Meta: category_id, category_name, icon_slug, item_count, is_lazy_category=true
+	 *
+	 * @since 0.18.2 TD-V0171-2
+	 *
+	 * @param array  $category Category-Array (id/name/icon_slug/fact_sheets).
+	 * @param string $service  Service-Tag ('mmb' oder 'mil').
+	 *
+	 * @return DHPS_Content_Collection|null Collection oder null bei Konstruktor-Drift.
+	 */
+	function dhps_mmb_category_to_collection( array $category, string $service ): ?DHPS_Content_Collection {
+		if ( ! class_exists( 'DHPS_Content_Collection' )
+			|| ! class_exists( 'DHPS_Content_Item' ) ) {
+			return null;
+		}
+
+		$category_id   = isset( $category['id'] ) ? (string) $category['id'] : '';
+		$category_name = isset( $category['name'] ) ? (string) $category['name'] : '';
+		$icon_slug     = isset( $category['icon_slug'] ) ? (string) $category['icon_slug'] : '';
+		$fact_sheets   = isset( $category['fact_sheets'] ) && is_array( $category['fact_sheets'] )
+			? $category['fact_sheets']
+			: array();
+
+		$items = array();
+		foreach ( $fact_sheets as $idx => $sheet ) {
+			if ( ! is_array( $sheet ) ) {
+				continue;
+			}
+			$title = isset( $sheet['title'] ) ? trim( (string) $sheet['title'] ) : '';
+			if ( '' === $title ) {
+				continue;
+			}
+
+			$source_id = isset( $sheet['id'] ) ? (string) $sheet['id'] : '';
+			$item_id   = $service . '-cat-' . $category_id . '-doc-'
+				. ( '' !== $source_id ? $source_id : (string) $idx );
+			$excerpt   = isset( $sheet['description'] ) ? (string) $sheet['description'] : null;
+
+			$meta = array(
+				'category_id'  => $category_id,
+				'sheet_index'  => (int) $idx,
+			);
+			if ( '' !== $source_id ) {
+				$meta['source_id'] = $source_id;
+			}
+			if ( isset( $sheet['pdf_params'] ) && is_array( $sheet['pdf_params'] ) ) {
+				$meta['pdf_params'] = $sheet['pdf_params'];
+			}
+
+			try {
+				$items[] = new DHPS_Content_Item(
+					$item_id,
+					$service,
+					$title,
+					'document',
+					'',         // body
+					$excerpt,
+					null,       // image
+					null,       // media
+					null,       // link
+					null,       // date
+					array(),    // tags
+					$category_id, // category
+					$meta
+				);
+			} catch ( \Throwable $e ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- diagnostisch.
+					error_log( sprintf(
+						'DHPS mmb_category_to_collection skip item cat=%s idx=%d: %s',
+						$category_id,
+						$idx,
+						$e->getMessage()
+					) );
+				}
+				continue;
+			}
+		}
+
+		$collection_meta = array(
+			'category_id'       => $category_id,
+			'category_name'     => $category_name,
+			'icon_slug'         => $icon_slug,
+			'item_count'        => count( $items ),
+			'is_lazy_category'  => true,
+		);
+
+		try {
+			return new DHPS_Content_Collection( $service, $items, $collection_meta );
+		} catch ( \Throwable $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- diagnostisch.
+				error_log( sprintf( 'DHPS mmb_category_to_collection failed: %s', $e->getMessage() ) );
+			}
+			return null;
+		}
+	}
+}
+
+if ( ! function_exists( 'dhps_mio_news_to_collection' ) ) {
+
+	/**
+	 * Wandelt eine MIO-News-Parser-Antwort in eine DHPS_Content_Collection
+	 * (Side-Channel fuer MIO-News-Container-AJAX, v0.18.2 TD-V0174-1).
+	 *
+	 * Wie die anderen Side-Channel-Helper (Option D aus v0.17.5 / v0.18.2):
+	 * JSON-Response BYTEWISE unveraendert; Collection nur ueber Action-Hook
+	 * `dhps_news_collection` zugaenglich.
+	 *
+	 * **Erste Produktivnutzung des `'news'`-Item-Types** (in ALLOWED_TYPES
+	 * seit v0.17.0 vorbehalten - loest sich hier ein).
+	 *
+	 * Eingabe (DHPS_MIO_News_Parser Shape):
+	 *   {
+	 *     'groups'     => [ {
+	 *         'name'     => string,
+	 *         'articles' => [ {
+	 *             'id'          => string,
+	 *             'title'       => string,
+	 *             'body_html'   => string,
+	 *             'metadata'    => array,  // topic/target/etc.
+	 *             'share_links' => array,  // email/twitter/etc.
+	 *         }, ... ],
+	 *     }, ... ],
+	 *     'pagination' => { 'current' => int, 'has_more' => bool },
+	 *   }
+	 *
+	 * Mapping:
+	 * - Items: type='news', Item-ID `{service}-news-{group_idx}-{article_id-or-idx}`
+	 * - Item-body: body_html (Roh-HTML aus Parser, Trust-Layer wie immer)
+	 * - Item-meta: source_id, group_index, group_name, metadata (durchgereicht),
+	 *   share_links (durchgereicht), body_html (Frontend-JS-Konvention)
+	 * - Collection-Meta: groups_order, pagination (mit Defaults), is_news=true
+	 *
+	 * @since 0.18.2 TD-V0174-1
+	 *
+	 * @param array  $parsed_news Parser-Output (groups + pagination).
+	 * @param string $service     Service-Tag ('mio' oder 'lxmio').
+	 *
+	 * @return DHPS_Content_Collection|null Collection oder null bei Drift.
+	 */
+	function dhps_mio_news_to_collection( array $parsed_news, string $service ): ?DHPS_Content_Collection {
+		if ( ! class_exists( 'DHPS_Content_Collection' )
+			|| ! class_exists( 'DHPS_Content_Item' ) ) {
+			return null;
+		}
+
+		$groups = isset( $parsed_news['groups'] ) && is_array( $parsed_news['groups'] )
+			? $parsed_news['groups']
+			: array();
+
+		$pagination_raw = isset( $parsed_news['pagination'] ) && is_array( $parsed_news['pagination'] )
+			? $parsed_news['pagination']
+			: array();
+		$pagination     = array(
+			'current'  => isset( $pagination_raw['current'] ) ? (int) $pagination_raw['current'] : 1,
+			'has_more' => ! empty( $pagination_raw['has_more'] ),
+		);
+
+		$items        = array();
+		$groups_order = array();
+
+		foreach ( $groups as $group_idx => $group ) {
+			if ( ! is_array( $group ) ) {
+				continue;
+			}
+			$group_name = isset( $group['name'] ) ? (string) $group['name'] : '';
+			$articles   = isset( $group['articles'] ) && is_array( $group['articles'] )
+				? $group['articles']
+				: array();
+
+			$groups_order[] = array(
+				'index' => (int) $group_idx,
+				'name'  => $group_name,
+				'count' => count( $articles ),
+			);
+
+			foreach ( $articles as $art_idx => $article ) {
+				if ( ! is_array( $article ) ) {
+					continue;
+				}
+				$title = isset( $article['title'] ) ? trim( (string) $article['title'] ) : '';
+				if ( '' === $title ) {
+					continue;
+				}
+
+				$source_id = isset( $article['id'] ) ? (string) $article['id'] : '';
+				$item_id   = $service . '-news-' . (int) $group_idx . '-'
+					. ( '' !== $source_id ? $source_id : (string) $art_idx );
+				$body_html = isset( $article['body_html'] ) ? (string) $article['body_html'] : '';
+
+				$meta = array(
+					'group_index' => (int) $group_idx,
+					'group_name'  => $group_name,
+					'body_html'   => $body_html, // Duplikat fuer Frontend-JS-Konvention.
+				);
+				if ( '' !== $source_id ) {
+					$meta['source_id'] = $source_id;
+				}
+				if ( isset( $article['metadata'] ) && is_array( $article['metadata'] ) ) {
+					$meta['metadata'] = $article['metadata'];
+				}
+				if ( isset( $article['share_links'] ) && is_array( $article['share_links'] ) ) {
+					$meta['share_links'] = $article['share_links'];
+				}
+
+				try {
+					$items[] = new DHPS_Content_Item(
+						$item_id,
+						$service,
+						$title,
+						'news',
+						$body_html, // body
+						null,       // excerpt
+						null,       // image
+						null,       // media
+						null,       // link
+						null,       // date
+						array(),    // tags
+						$group_name, // category (Gruppen-Name als Category-Hint)
+						$meta
+					);
+				} catch ( \Throwable $e ) {
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+						// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- diagnostisch.
+						error_log( sprintf(
+							'DHPS mio_news_to_collection skip article group=%d idx=%d: %s',
+							(int) $group_idx,
+							(int) $art_idx,
+							$e->getMessage()
+						) );
+					}
+					continue;
+				}
+			}
+		}
+
+		$collection_meta = array(
+			'groups_order' => $groups_order,
+			'pagination'   => $pagination,
+			'is_news'      => true,
+		);
+
+		try {
+			return new DHPS_Content_Collection( $service, $items, $collection_meta );
+		} catch ( \Throwable $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- diagnostisch.
+				error_log( sprintf( 'DHPS mio_news_to_collection failed: %s', $e->getMessage() ) );
+			}
+			return null;
+		}
+	}
+}

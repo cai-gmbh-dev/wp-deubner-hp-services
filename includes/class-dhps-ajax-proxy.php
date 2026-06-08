@@ -174,6 +174,27 @@ class DHPS_AJAX_Proxy {
 		// 7. Response parsen.
 		$parsed = $this->news_parser->parse( $response->get_body() );
 
+		// v0.18.2 TD-V0174-1: Collection-Side-Channel fuer DTO-Konsistenz.
+		// JSON-Response bleibt BYTEWISE UNVERAENDERT. Plugins/Themes koennen
+		// die Collection via Action-Hook konsumieren (z.B. fuer eigene
+		// News-Renders, Analytics). Erste Produktivnutzung des `'news'`-
+		// Item-Types (in ALLOWED_TYPES seit v0.17.0 vorbehalten).
+		if ( function_exists( 'dhps_mio_news_to_collection' ) ) {
+			$news_collection = dhps_mio_news_to_collection( $parsed, 'mio' );
+
+			/**
+			 * Action: erlaubt Plugins/Themes die News-Daten als Collection zu
+			 * konsumieren. Default-Verhalten unveraendert.
+			 *
+			 * @since 0.18.2
+			 *
+			 * @param DHPS_Content_Collection|null $news_collection Collection oder null.
+			 * @param array                        $parsed          Roher Parser-Output.
+			 * @param string                       $service_tag     'mio' (LXMIO-News laeuft NICHT durch diesen Endpoint).
+			 */
+			do_action( 'dhps_news_collection', $news_collection, $parsed, 'mio' );
+		}
+
 		// 8. Ergebnis cachen (15 Minuten fuer AJAX-Anfragen).
 		if ( ! empty( $parsed['groups'] ) ) {
 			$this->cache->set_data( $cache_key, $parsed, 900 );

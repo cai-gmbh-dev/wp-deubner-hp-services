@@ -159,6 +159,48 @@ class DHPS_Component_Registry {
 		 */
 		$resolved = (string) apply_filters( 'dhps_component_template_path', $resolved, $name, $props );
 
+		// v0.20.0 Defense-in-Depth (Audit M-2 schliessen): Realpath-Whitelist.
+		// Wenn der Filter einen Pfad ausserhalb der zugelassenen Roots
+		// zurueckgibt (Plugin-/Theme-/Child-Theme-Roots), wird der Pfad
+		// verworfen. Schuetzt vor Path-Traversal via boswillige Filter.
+		if ( '' !== $resolved ) {
+			$real = realpath( $resolved );
+			if ( false === $real ) {
+				return '';
+			}
+			$allowed_roots = array(
+				realpath( DEUBNER_HP_SERVICES_PATH . 'public/views/components/' ),
+			);
+			if ( function_exists( 'get_stylesheet_directory' ) ) {
+				$allowed_roots[] = realpath( get_stylesheet_directory() . '/dhps/components/' );
+			}
+			if ( function_exists( 'get_template_directory' ) ) {
+				$allowed_roots[] = realpath( get_template_directory() . '/dhps/components/' );
+			}
+
+			/**
+			 * Filter: erlaubt zusaetzliche Root-Verzeichnisse fuer die Realpath-
+			 * Whitelist (Escape-Hatch fuer ungewoehnliche Setups, z.B. Mu-Plugin-
+			 * Component-Pools).
+			 *
+			 * @since 0.20.0
+			 *
+			 * @param array<int, string|false> $allowed_roots Liste realer Root-Pfade.
+			 */
+			$allowed_roots = (array) apply_filters( 'dhps_component_allowed_roots', $allowed_roots );
+
+			$is_within = false;
+			foreach ( $allowed_roots as $root ) {
+				if ( is_string( $root ) && '' !== $root && 0 === strpos( $real, $root ) ) {
+					$is_within = true;
+					break;
+				}
+			}
+			if ( ! $is_within ) {
+				return '';
+			}
+		}
+
 		return $resolved;
 	}
 
